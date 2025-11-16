@@ -3,8 +3,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
 @Module({
-  imports: [SupabaseModule,ConfigModule.forRoot()],
+  imports: [SupabaseModule,ConfigModule.forRoot(), AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
