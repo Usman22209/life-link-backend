@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
+import { DeleteFileDto } from './dto/delete-file.dto';
 
 @Controller('file')
 export class FileController {
@@ -31,20 +32,12 @@ export class FileController {
   }
 
   @Post('delete')
-  async deleteImage(@Body() body: any) {
-    const publicId = body.publicId;
-
-    if (!publicId) {
-      return {
-        success: false,
-        message: 'publicId is required',
-      };
-    }
-
+  async deleteImage(@Body() body: DeleteFileDto) {
+    const { publicId } = body;
+    
     try {
       const result = await this.fileService.deleteImage(publicId);
-
-      // Cloudinary returns 'ok' if deleted, 'not found' if file does not exist
+      
       if (result.result === 'ok') {
         return {
           success: true,
