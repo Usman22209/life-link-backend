@@ -12,7 +12,10 @@ export class FileService {
     });
   }
 
-  async uploadImage(file: Express.Multer.File, folder = 'app_images'): Promise<UploadApiResponse> {
+  async uploadImage(
+    file: Express.Multer.File,
+    folder = 'app_images',
+  ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder },
@@ -20,7 +23,7 @@ export class FileService {
           if (error) return reject(error);
           if (!result) return reject(new Error('Upload failed'));
           resolve(result);
-        }
+        },
       );
       stream.end(file.buffer);
     });

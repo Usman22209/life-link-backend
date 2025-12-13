@@ -6,7 +6,7 @@ import { SupabaseModule } from 'src/supabase/supabase.module';
 @Module({
   controllers: [AuthController],
   providers: [AuthService],
-  exports: [AuthService], 
+  exports: [AuthService],
   imports: [SupabaseModule]
 })
 export class AuthModule {}

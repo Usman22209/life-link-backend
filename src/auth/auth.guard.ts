@@ -14,9 +14,8 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
 
-    const authHeader = (req.headers.authorization || req.headers.Authorization) as
-      | string
-      | undefined;
+    const authHeader = (req.headers.authorization ||
+      req.headers.Authorization) as string | undefined;
 
     let token: string | undefined;
 
@@ -27,25 +26,27 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-
     if (!token) {
       throw new UnauthorizedException('No access token provided');
     }
 
     try {
-      const { data, error } = await this.supabase.client.auth.getUser(token as string);
+      const { data, error } = await this.supabase.client.auth.getUser(
+        token as string,
+      );
 
       if (error || !data?.user) {
-        throw new UnauthorizedException(error?.message || 'Invalid access token');
+        throw new UnauthorizedException(
+          error?.message || 'Invalid access token',
+        );
       }
 
       req['user'] = {
-        id: data.user.id
+        id: data.user.id,
       };
 
       return true;
     } catch (err: any) {
-      // Normalize errors into UnauthorizedException so client gets 401
       throw new UnauthorizedException(err?.message || 'Invalid access token');
     }
   }

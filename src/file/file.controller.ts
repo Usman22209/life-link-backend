@@ -38,10 +38,10 @@ export class FileController {
   @Post('delete')
   async deleteImage(@Body() body: DeleteFileDto) {
     const { publicId } = body;
-    
+
     try {
       const result = await this.fileService.deleteImage(publicId);
-      
+
       if (result.result === 'ok') {
         return {
           success: true,
