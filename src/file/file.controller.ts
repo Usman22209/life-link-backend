@@ -4,15 +4,18 @@ import {
   UploadedFile,
   UseInterceptors,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
 import { DeleteFileDto } from './dto/delete-file.dto';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
+  @UseGuards(AuthGuard)
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
@@ -31,6 +34,7 @@ export class FileController {
     }
   }
 
+  @UseGuards(AuthGuard)
   @Post('delete')
   async deleteImage(@Body() body: DeleteFileDto) {
     const { publicId } = body;
