@@ -7,6 +7,6 @@ import { SupabaseModule } from 'src/supabase/supabase.module';
   controllers: [AuthController],
   providers: [AuthService],
   exports: [AuthService],
-  imports: [SupabaseModule]
+  imports: [SupabaseModule],
 })
 export class AuthModule {}

@@ -10,7 +10,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
 import { DeleteFileDto } from './dto/delete-file.dto';
 import { AuthGuard } from '../auth/auth.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 
 @ApiTags('file')
 @Controller('file')
@@ -34,8 +40,32 @@ export class FileController {
       },
     },
   })
-  @ApiResponse({ status: 201, description: 'File uploaded successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({
+    status: 201,
+    description: 'File uploaded successfully.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        url: {
+          type: 'string',
+          example: 'https://res.cloudinary.com/.../image.jpg',
+        },
+        publicId: { type: 'string', example: 'user_uploads/abc123' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        message: { type: 'string', example: 'Upload failed' },
+      },
+    },
+  })
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
       const result = await this.fileService.uploadImage(file, 'user_uploads');
@@ -55,8 +85,42 @@ export class FileController {
   @UseGuards(AuthGuard)
   @Post('delete')
   @ApiOperation({ summary: 'Delete an uploaded file' })
-  @ApiResponse({ status: 200, description: 'File deleted successfully.' })
-  @ApiResponse({ status: 404, description: 'File not found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'File deleted successfully.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'File deleted successfully' },
+        result: { type: 'object', description: 'Cloudinary delete result' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'File not found.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        message: { type: 'string', example: 'File not found' },
+        result: { type: 'object', description: 'Cloudinary delete result' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to delete file.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        message: { type: 'string', example: 'Failed to delete file' },
+        result: { type: 'object', description: 'Cloudinary delete result' },
+      },
+    },
+  })
   async deleteImage(@Body() body: DeleteFileDto) {
     const { publicId } = body;
 

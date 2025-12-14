@@ -19,6 +19,9 @@ export class AuthService {
     const { data, error } = await this.supabase.client.auth.signUp({
       email: dto.email,
       password: dto.password,
+      options: {
+        emailRedirectTo: 'lifelink://auth/callback',
+      },
     });
 
     if (error) {
