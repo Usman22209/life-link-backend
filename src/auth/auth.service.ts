@@ -7,6 +7,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,11 +37,10 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const { data, error } =
-      await this.supabase.client.auth.signInWithPassword({
-        email: dto.email,
-        password: dto.password,
-      });
+    const { data, error } = await this.supabase.client.auth.signInWithPassword({
+      email: dto.email,
+      password: dto.password,
+    });
 
     if (error) {
       this.logger.warn(`Login failed for ${dto.email}`);
@@ -64,10 +64,12 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const { error } =
-      await this.supabase.client.auth.resetPasswordForEmail(email, {
+    const { error } = await this.supabase.client.auth.resetPasswordForEmail(
+      email,
+      {
         redirectTo: 'https://google.com',
-      });
+      },
+    );
 
     if (error) {
       this.logger.error(
@@ -81,5 +83,33 @@ export class AuthService {
       message:
         'If an account with this email exists, we have sent a password reset link. Please check your inbox.',
     };
+  }
+
+  async googleLogin(dto: GoogleLoginDto) {
+    try {
+      const { data, error } = await this.supabase.client.auth.signInWithIdToken(
+        {
+          provider: 'google',
+          token: dto.idToken,
+        },
+      );
+
+      if (error) {
+        this.logger.warn('Google login failed', error.message);
+        throw new UnauthorizedException('Google login failed.');
+      }
+
+      const { user, session } = data;
+
+      return {
+        success: true,
+        message: 'Logged in successfully with Google.',
+        user,
+        session,
+      };
+    } catch (err) {
+      this.logger.error('Google login error', err.message);
+      throw new UnauthorizedException('Google login failed.');
+    }
   }
 }
