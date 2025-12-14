@@ -10,7 +10,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
 import { DeleteFileDto } from './dto/delete-file.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
+@ApiTags('file')
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}
@@ -18,6 +20,22 @@ export class FileController {
   @UseGuards(AuthGuard)
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload an image file' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file to upload',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'File uploaded successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
       const result = await this.fileService.uploadImage(file, 'user_uploads');
@@ -36,6 +54,9 @@ export class FileController {
 
   @UseGuards(AuthGuard)
   @Post('delete')
+  @ApiOperation({ summary: 'Delete an uploaded file' })
+  @ApiResponse({ status: 200, description: 'File deleted successfully.' })
+  @ApiResponse({ status: 404, description: 'File not found.' })
   async deleteImage(@Body() body: DeleteFileDto) {
     const { publicId } = body;
 
