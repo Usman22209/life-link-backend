@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -13,41 +13,88 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
+    const res = context.switchToHttp().getResponse<Response>();
 
-    const authHeader = (req.headers.authorization ||
-      req.headers.Authorization) as string | undefined;
+    const authHeader = req.headers.authorization;
+    const sessionId = req.headers['x-session-id'] as string;
 
-    let token: string | undefined;
-
-    if (authHeader && typeof authHeader === 'string') {
-      const parts = authHeader.split(' ');
-      if (parts.length === 2 && /^Bearer$/i.test(parts[0])) {
-        token = parts[1];
-      }
+    if (!authHeader || !sessionId) {
+      throw new UnauthorizedException('Missing authentication headers');
     }
 
-    if (!token) {
-      throw new UnauthorizedException('No access token provided');
-    }
+    const accessToken = authHeader.replace('Bearer ', '');
 
-    try {
-      const { data, error } = await this.supabase.client.auth.getUser(
-        token as string,
-      );
+    // 1️⃣ Try normal access token validation
+    const { data, error } = await this.supabase.client.auth.getUser(
+      accessToken,
+    );
 
-      if (error || !data?.user) {
-        throw new UnauthorizedException(
-          error?.message || 'Invalid access token',
-        );
-      }
-
-      req['user'] = {
-        id: data.user.id,
-      };
-
+    if (!error && data?.user) {
+      req['user'] = { id: data.user.id };
       return true;
-    } catch (err: any) {
-      throw new UnauthorizedException(err?.message || 'Invalid access token');
     }
+
+    // 2️⃣ Access token invalid → refresh using SESSION ID (no JWT decoding!)
+    const { data: session, error: sessionError } =
+      await this.supabase.client
+        .from('sessions')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single();
+
+    if (sessionError || !session) {
+      throw new UnauthorizedException('Session expired. Please login again.');
+    }
+
+    // 🔒 SECURITY CHECK: Verify refresh token hasn't expired
+    const refreshTokenExpiry = new Date(session.refresh_token_expires_at);
+    if (refreshTokenExpiry < new Date()) {
+      // Refresh token is expired, clean up and reject
+      await this.supabase.client
+        .from('sessions')
+        .delete()
+        .eq('session_id', sessionId);
+
+      throw new UnauthorizedException('Session expired, please login again');
+    }
+
+    // 3️⃣ Refresh token using Supabase
+    const refreshResult = await this.supabase.client.auth.refreshSession({
+      refresh_token: session.refresh_token,
+    });
+
+    if (
+      refreshResult.error ||
+      !refreshResult.data?.session ||
+      !refreshResult.data?.user
+    ) {
+      // cleanup dead session
+      await this.supabase.client
+        .from('sessions')
+        .delete()
+        .eq('session_id', sessionId);
+
+      throw new UnauthorizedException('Session expired. Please login again.');
+    }
+
+    const newSession = refreshResult.data.session;
+    if (!newSession.expires_at) {
+      throw new UnauthorizedException('Invalid session data');
+    }
+
+    // 4️⃣ Update DB with rotated refresh token
+    await this.supabase.client
+      .from('sessions')
+      .update({
+        refresh_token: newSession.refresh_token,
+        refresh_token_expires_at: new Date(newSession.expires_at * 1000),
+      })
+      .eq('session_id', sessionId);
+
+    // 5️⃣ Send new access token to frontend
+    res.setHeader('x-access-token', newSession.access_token);
+
+    req['user'] = { id: refreshResult.data.user.id };
+    return true;
   }
 }

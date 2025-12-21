@@ -1,10 +1,11 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { AuthGuard } from './auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -44,9 +45,17 @@ export class AuthController {
       properties: {
         success: { type: 'boolean', example: true },
         message: { type: 'string', example: 'You are logged in successfully.' },
-        session: {
+        access_token: {
+          type: 'string',
+          description: 'JWT access token',
+        },
+        expires_at: {
+          type: 'number',
+          description: 'Unix timestamp when token expires',
+        },
+        user: {
           type: 'object',
-          description: 'Session object from Supabase',
+          description: 'User object from Supabase',
         },
       },
     },
@@ -91,16 +100,40 @@ export class AuthController {
           type: 'string',
           example: 'Logged in successfully with Google.',
         },
-        user: { type: 'object', description: 'User object from Supabase' },
-        session: {
-          type: 'object',
-          description: 'Session object from Supabase',
+        access_token: {
+          type: 'string',
+          description: 'JWT access token',
         },
+        expires_at: {
+          type: 'number',
+          description: 'Unix timestamp when token expires',
+        },
+        user: { type: 'object', description: 'User object from Supabase' },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   googleLogin(@Body() dto: GoogleLoginDto) {
     return this.authService.googleLogin(dto);
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logout successful.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Logged out successfully.' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  logout(@Req() req) {
+    const sessionId = req.headers['x-session-id'];
+    return this.authService.logout(sessionId);
   }
 }

@@ -59,10 +59,44 @@ export class AuthService {
       );
     }
 
+    const session = data.session;
+    const user = data.user;
+
+    if (!session || !session.refresh_token || !session.expires_at) {
+      throw new UnauthorizedException('Invalid session data');
+    }
+
+    // Generate session_id (Supabase doesn't expose session_id in client response)
+    const { randomUUID } = await import('crypto');
+    const sessionId = randomUUID();
+
+    // Store session with session_id in database
+    const sessionInsert = await this.supabase.client.from('sessions').insert({
+      session_id: sessionId,
+      user_id: user.id,
+      refresh_token: session.refresh_token,
+      refresh_token_expires_at: new Date(session.expires_at * 1000),
+    });
+
+    if (sessionInsert.error) {
+      this.logger.error(
+        `Failed to store session for user ${user.id}`,
+        sessionInsert.error,
+      );
+      // Continue with login even if session storage fails
+    } else {
+      this.logger.log(`Session stored successfully for user ${user.id}`);
+    }
+
+    // Return access token AND session_id to frontend
     return {
       success: true,
       message: 'You are logged in successfully.',
-      session: data.session,
+      session: {
+        access_token: session.access_token,
+        expires_at: session.expires_at,
+        session_id: sessionId, // Frontend must store this
+      },
     };
   }
 
@@ -70,7 +104,7 @@ export class AuthService {
     const { error } = await this.supabase.client.auth.resetPasswordForEmail(
       email,
       {
-        redirectTo: 'https://google.com',
+        redirectTo: 'lifelink://auth/ChangePassword',
       },
     );
 
@@ -104,15 +138,57 @@ export class AuthService {
 
       const { user, session } = data;
 
+      if (!session || !session.refresh_token || !session.expires_at) {
+        throw new UnauthorizedException('Invalid session data');
+      }
+
+      // Generate session_id
+      const { randomUUID } = await import('crypto');
+      const sessionId = randomUUID();
+
+      // Store session with session_id in database
+      const sessionInsert = await this.supabase.client.from('sessions').insert({
+        session_id: sessionId,
+        user_id: user.id,
+        refresh_token: session.refresh_token,
+        refresh_token_expires_at: new Date(session.expires_at * 1000),
+      });
+
+      if (sessionInsert.error) {
+        this.logger.error(
+          `Failed to store session for user ${user.id}`,
+          sessionInsert.error,
+        );
+        // Continue with login even if session storage fails
+      } else {
+        this.logger.log(`Session stored successfully for user ${user.id}`);
+      }
+
+      // Return access token AND session_id to frontend
       return {
         success: true,
         message: 'Logged in successfully with Google.',
-        user,
-        session,
+        session: {
+          access_token: session.access_token,
+          expires_at: session.expires_at,
+          session_id: sessionId,
+        },
       };
     } catch (err) {
       this.logger.error('Google login error', err.message);
       throw new UnauthorizedException('Google login failed.');
     }
+  }
+
+  async logout(sessionId: string) {
+    await this.supabase.client
+      .from('sessions')
+      .delete()
+      .eq('session_id', sessionId);
+
+    return {
+      success: true,
+      message: 'Logged out successfully.',
+    };
   }
 }
