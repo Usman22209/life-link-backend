@@ -4,10 +4,12 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { RequestContextUtil } from '../common/utils/request-context.util';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +41,7 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, req: Request) {
     const { data, error } = await this.supabase.client.auth.signInWithPassword({
       email: dto.email,
       password: dto.password,
@@ -66,16 +68,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid session data');
     }
 
-    // Generate session_id (Supabase doesn't expose session_id in client response)
+    // Generate session_id
     const { randomUUID } = await import('crypto');
     const sessionId = randomUUID();
 
-    // Store session with session_id in database
+    // Extract metadata from request (SECURE - not from frontend)
+    const metadata = RequestContextUtil.extractMetadata(req);
+
+    // Store session with session_id and metadata in database
     const sessionInsert = await this.supabase.client.from('sessions').insert({
       session_id: sessionId,
       user_id: user.id,
       refresh_token: session.refresh_token,
       refresh_token_expires_at: new Date(session.expires_at * 1000),
+      // Metadata from request
+      user_agent: metadata.userAgent,
+      ip_address: metadata.ipAddress,
+      browser: metadata.browser,
+      os: metadata.os,
+      device_type: metadata.deviceType,
     });
 
     if (sessionInsert.error) {
@@ -122,7 +133,7 @@ export class AuthService {
     };
   }
 
-  async googleLogin(dto: GoogleLoginDto) {
+  async googleLogin(dto: GoogleLoginDto, req: Request) {
     try {
       const { data, error } = await this.supabase.client.auth.signInWithIdToken(
         {
@@ -146,12 +157,20 @@ export class AuthService {
       const { randomUUID } = await import('crypto');
       const sessionId = randomUUID();
 
-      // Store session with session_id in database
+      // Extract metadata from request
+      const metadata = RequestContextUtil.extractMetadata(req);
+
+      // Store session with session_id and metadata in database
       const sessionInsert = await this.supabase.client.from('sessions').insert({
         session_id: sessionId,
         user_id: user.id,
         refresh_token: session.refresh_token,
         refresh_token_expires_at: new Date(session.expires_at * 1000),
+        user_agent: metadata.userAgent,
+        ip_address: metadata.ipAddress,
+        browser: metadata.browser,
+        os: metadata.os,
+        device_type: metadata.deviceType,
       });
 
       if (sessionInsert.error) {
@@ -178,6 +197,32 @@ export class AuthService {
       this.logger.error('Google login error', err.message);
       throw new UnauthorizedException('Google login failed.');
     }
+  }
+
+  async getSessions(userId: string) {
+    const { data } = await this.supabase.client
+      .from('sessions')
+      .select('session_id, created_at, user_agent, ip_address, device_type, browser, os, last_refreshed_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    return {
+      success: true,
+      sessions: data || [],
+    };
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    await this.supabase.client
+      .from('sessions')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', userId); // Ensure user can only delete their own sessions
+
+    return {
+      success: true,
+      message: 'Session revoked successfully',
+    };
   }
 
   async logout(sessionId: string) {

@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Delete, Param } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -61,8 +62,8 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.authService.login(dto, req);
   }
 
   @Post('forgot-password')
@@ -113,8 +114,8 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  googleLogin(@Body() dto: GoogleLoginDto) {
-    return this.authService.googleLogin(dto);
+  googleLogin(@Body() dto: GoogleLoginDto, @Req() req: Request) {
+    return this.authService.googleLogin(dto, req);
   }
 
   @Post('logout')
@@ -135,5 +136,32 @@ export class AuthController {
   logout(@Req() req) {
     const sessionId = req.headers['x-session-id'];
     return this.authService.logout(sessionId);
+  }
+
+  @Get('sessions')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get all active sessions for the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active sessions retrieved successfully.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async getSessions(@Req() req: any) {
+    return this.authService.getSessions(req.user.id);
+  }
+
+  @Delete('sessions/:sessionId')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Revoke a specific session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session revoked successfully.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async revokeSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.authService.revokeSession(req.user.id, sessionId);
   }
 }

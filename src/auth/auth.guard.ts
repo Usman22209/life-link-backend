@@ -88,6 +88,7 @@ export class AuthGuard implements CanActivate {
       .update({
         refresh_token: newSession.refresh_token,
         refresh_token_expires_at: new Date(newSession.expires_at * 1000),
+        last_refreshed_at: new Date(),
       })
       .eq('session_id', sessionId);
 
