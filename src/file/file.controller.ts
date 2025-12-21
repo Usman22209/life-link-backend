@@ -16,9 +16,12 @@ import {
   ApiResponse,
   ApiConsumes,
   ApiBody,
+  ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { SwaggerResponses, SwaggerHeaders, SwaggerBodies } from './swagger/file-responses';
 
-@ApiTags('file')
+@ApiTags('File Management')
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}
@@ -26,46 +29,18 @@ export class FileController {
   @UseGuards(AuthGuard)
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload an image file' })
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Upload an image file',
+    description: 'Upload an image to Cloudinary. Returns secure URL and public ID. Supports automatic token refresh.',
+  })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Image file to upload',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'File uploaded successfully.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        url: {
-          type: 'string',
-          example: 'https://res.cloudinary.com/.../image.jpg',
-        },
-        publicId: { type: 'string', example: 'user_uploads/abc123' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Upload failed' },
-      },
-    },
-  })
+  @ApiBody(SwaggerBodies.upload)
+  @ApiHeader(SwaggerHeaders.authorization)
+  @ApiHeader(SwaggerHeaders.sessionId)
+  @ApiResponse(SwaggerResponses.upload.success)
+  @ApiResponse(SwaggerResponses.upload.badRequest)
+  @ApiResponse(SwaggerResponses.upload.unauthorized)
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
       const result = await this.fileService.uploadImage(file, 'user_uploads');
@@ -84,43 +59,17 @@ export class FileController {
 
   @UseGuards(AuthGuard)
   @Post('delete')
-  @ApiOperation({ summary: 'Delete an uploaded file' })
-  @ApiResponse({
-    status: 200,
-    description: 'File deleted successfully.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'File deleted successfully' },
-        result: { type: 'object', description: 'Cloudinary delete result' },
-      },
-    },
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Delete an uploaded file',
+    description: 'Delete a file from Cloudinary using its public ID. Requires authentication.',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'File not found.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'File not found' },
-        result: { type: 'object', description: 'Cloudinary delete result' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Failed to delete file.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Failed to delete file' },
-        result: { type: 'object', description: 'Cloudinary delete result' },
-      },
-    },
-  })
+  @ApiHeader(SwaggerHeaders.authorization)
+  @ApiHeader(SwaggerHeaders.sessionId)
+  @ApiResponse(SwaggerResponses.delete.success)
+  @ApiResponse(SwaggerResponses.delete.notFound)
+  @ApiResponse(SwaggerResponses.delete.badRequest)
+  @ApiResponse(SwaggerResponses.delete.unauthorized)
   async deleteImage(@Body() body: DeleteFileDto) {
     const { publicId } = body;
 
