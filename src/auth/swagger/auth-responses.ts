@@ -84,6 +84,14 @@ export const SwaggerResponses = {
               },
             },
           },
+          user: {
+            type: 'object',
+            description: 'User information',
+            properties: {
+              id: { type: 'string', example: '670e4560-123b-4bea-9953-f336c3e01b0b' },
+              email: { type: 'string', example: 'user@example.com' },
+            },
+          },
         },
       },
     },
@@ -168,6 +176,14 @@ export const SwaggerResponses = {
                 description: 'Session ID for subsequent requests',
               },
             },
+          },
+        },
+        user: {
+          type: 'object',
+          description: 'User information',
+          properties: {
+            id: { type: 'string', example: '670e4560-123b-4bea-9953-f336c3e01b0b' },
+            email: { type: 'string', example: 'user@example.com' },
           },
         },
       },
@@ -340,6 +356,46 @@ export const SwaggerResponses = {
           statusCode: { type: 'number', example: 404 },
           message: { type: 'string', example: 'Session not found' },
           error: { type: 'string', example: 'Not Found' },
+        },
+      },
+    },
+  },
+
+  // Reset password responses
+  resetPassword: {
+    success: {
+      status: 200,
+      description: 'Password has been reset successfully.',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'Password has been reset successfully.' },
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '670e4560-123b-4bea-9953-f336c3e01b0b' },
+              email: { type: 'string', example: 'user@example.com' },
+            },
+          },
+        },
+      },
+      headers: {
+        'x-access-token': {
+          description: 'New access token if refreshed (rare during reset)',
+          schema: { type: 'string' },
+        },
+      },
+    },
+    badRequest: {
+      status: 400,
+      description: 'Bad request - Link expired or invalid password',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 400 },
+          message: { type: 'string', example: 'Failed to reset password. Link may be expired.' },
+          error: { type: 'string', example: 'Bad Request' },
         },
       },
     },

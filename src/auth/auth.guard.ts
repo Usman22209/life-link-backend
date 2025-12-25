@@ -18,8 +18,8 @@ export class AuthGuard implements CanActivate {
     const authHeader = req.headers.authorization;
     const sessionId = req.headers['x-session-id'] as string;
 
-    if (!authHeader || !sessionId) {
-      throw new UnauthorizedException('Missing authentication headers');
+    if (!authHeader) {
+      throw new UnauthorizedException('Missing authorization header');
     }
 
     const accessToken = authHeader.replace('Bearer ', '');
@@ -35,6 +35,10 @@ export class AuthGuard implements CanActivate {
     }
 
     // 2️⃣ Access token invalid → refresh using SESSION ID (no JWT decoding!)
+    if (!sessionId) {
+      throw new UnauthorizedException('Session ID required for token refresh');
+    }
+
     const { data: session, error: sessionError } =
       await this.supabase.client
         .from('sessions')

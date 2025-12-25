@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Get, Delete, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Delete, Param, Patch } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from './auth.guard';
 import { SwaggerResponses, SwaggerHeaders } from './swagger/auth-responses';
 
@@ -56,6 +57,19 @@ export class AuthController {
   @ApiResponse(SwaggerResponses.googleLogin.unauthorized)
   googleLogin(@Body() dto: GoogleLoginDto, @Req() req: Request) {
     return this.authService.googleLogin(dto, req);
+  }
+
+  @Patch('reset-password')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Reset password using access token',
+    description: 'Update the user password. Requires the access token received from a recovery link.',
+  })
+  @ApiResponse(SwaggerResponses.resetPassword.success)
+  @ApiResponse(SwaggerResponses.resetPassword.badRequest)
+  async resetPassword(@Body() dto: ResetPasswordDto, @Req() req: any) {
+    return this.authService.resetPassword(req.user.id, dto.password);
   }
 
   @Post('logout')

@@ -99,14 +99,19 @@ export class AuthService {
       this.logger.log(`Session stored successfully for user ${user.id}`);
     }
 
-    // Return access token AND session_id to frontend
+    // Return access token, session_id, and user info to frontend
     return {
       success: true,
       message: 'You are logged in successfully.',
       session: {
         access_token: session.access_token,
         expires_at: session.expires_at,
-        session_id: sessionId, // Frontend must store this
+        session_id: sessionId,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        email_confirmed_at: user.email_confirmed_at,
       },
     };
   }
@@ -115,7 +120,7 @@ export class AuthService {
     const { error } = await this.supabase.client.auth.resetPasswordForEmail(
       email,
       {
-        redirectTo: 'lifelink://auth/ChangePassword',
+        redirectTo: 'lifelink://auth/ResetPassword',
       },
     );
 
@@ -183,7 +188,7 @@ export class AuthService {
         this.logger.log(`Session stored successfully for user ${user.id}`);
       }
 
-      // Return access token AND session_id to frontend
+      // Return access token, session_id, and user info to frontend
       return {
         success: true,
         message: 'Logged in successfully with Google.',
@@ -191,6 +196,10 @@ export class AuthService {
           access_token: session.access_token,
           expires_at: session.expires_at,
           session_id: sessionId,
+        },
+        user: {
+          id: user.id,
+          email: user.email,
         },
       };
     } catch (err) {
@@ -234,6 +243,27 @@ export class AuthService {
     return {
       success: true,
       message: 'Logged out successfully.',
+    };
+  }
+
+  async resetPassword(userId: string, password: string) {
+    const { data, error } = await this.supabase.client.auth.admin.updateUserById(
+      userId,
+      { password: password },
+    );
+
+    if (error) {
+      this.logger.error(`Password reset failed for user ${userId}`, error.message);
+      throw new BadRequestException('Failed to reset password. Link may be expired.');
+    }
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully.',
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+      },
     };
   }
 }
