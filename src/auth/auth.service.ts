@@ -83,26 +83,9 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(email: string) {
-    console.time('forgotPassword:total');
-
-    // Step 1: Fast check if user exists (~50ms DB query)
-    console.time('forgotPassword:rpc_check');
-    const { data: exists, error } = await this.supabase.client.rpc('check_email_exists', {
-      user_email: email,
-    });
-    console.timeEnd('forgotPassword:rpc_check');
-    console.log(`forgotPassword: email=${email}, exists=${exists}, error=${error?.message || 'none'}`);
-
-    if (!exists) {
-      console.timeEnd('forgotPassword:total');
-      return {
-        success: false,
-        message: 'No account found with this email address.',
-      };
-    }
-
-    // Step 2: Fire-and-forget - send email in background
+  forgotPassword(email: string) {
+    // Fire-and-forget: Send email in background, return immediately
+    // Supabase handles non-existent users securely (no email sent, no error exposed)
     this.supabase.client.auth
       .resetPasswordForEmail(email, {
         redirectTo: 'lifelink://auth/ResetPassword',
@@ -114,10 +97,10 @@ export class AuthService {
         );
       });
 
-    console.timeEnd('forgotPassword:total');
     return {
       success: true,
-      message: 'Password reset link has been sent to your email.',
+      message:
+        'If an account with this email exists, we have sent a password reset link. Please check your inbox.',
     };
   }
 
