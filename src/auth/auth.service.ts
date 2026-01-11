@@ -4,18 +4,16 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
-import { RequestContextUtil } from '../common/utils/request-context.util';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) { }
 
   async signup(dto: SignupDto) {
     const { data, error } = await this.supabase.client.auth.signUp({
@@ -41,7 +39,7 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto, req: Request) {
+  async login(dto: LoginDto) {
     const { data, error } = await this.supabase.client.auth.signInWithPassword({
       email: dto.email,
       password: dto.password,
@@ -64,49 +62,18 @@ export class AuthService {
     const session = data.session;
     const user = data.user;
 
-    if (!session || !session.refresh_token || !session.expires_at) {
+    if (!session) {
       throw new UnauthorizedException('Invalid session data');
     }
 
-    // Generate session_id
-    const { randomUUID } = await import('crypto');
-    const sessionId = randomUUID();
-
-    // Extract metadata from request (SECURE - not from frontend)
-    const metadata = RequestContextUtil.extractMetadata(req);
-
-    // Store session with session_id and metadata in database
-    const sessionInsert = await this.supabase.client.from('sessions').insert({
-      session_id: sessionId,
-      user_id: user.id,
-      refresh_token: session.refresh_token,
-      refresh_token_expires_at: new Date(session.expires_at * 1000),
-      // Metadata from request
-      user_agent: metadata.userAgent,
-      ip_address: metadata.ipAddress,
-      browser: metadata.browser,
-      os: metadata.os,
-      device_type: metadata.deviceType,
-    });
-
-    if (sessionInsert.error) {
-      this.logger.error(
-        `Failed to store session for user ${user.id}`,
-        sessionInsert.error,
-      );
-      // Continue with login even if session storage fails
-    } else {
-      this.logger.log(`Session stored successfully for user ${user.id}`);
-    }
-
-    // Return access token, session_id, and user info to frontend
+    // Return tokens directly - frontend handles refresh with Supabase
     return {
       success: true,
       message: 'You are logged in successfully.',
       session: {
         access_token: session.access_token,
+        refresh_token: session.refresh_token,
         expires_at: session.expires_at,
-        session_id: sessionId,
       },
       user: {
         id: user.id,
@@ -138,7 +105,7 @@ export class AuthService {
     };
   }
 
-  async googleLogin(dto: GoogleLoginDto, req: Request) {
+  async googleLogin(dto: GoogleLoginDto) {
     try {
       const { data, error } = await this.supabase.client.auth.signInWithIdToken(
         {
@@ -154,48 +121,18 @@ export class AuthService {
 
       const { user, session } = data;
 
-      if (!session || !session.refresh_token || !session.expires_at) {
+      if (!session) {
         throw new UnauthorizedException('Invalid session data');
       }
 
-      // Generate session_id
-      const { randomUUID } = await import('crypto');
-      const sessionId = randomUUID();
-
-      // Extract metadata from request
-      const metadata = RequestContextUtil.extractMetadata(req);
-
-      // Store session with session_id and metadata in database
-      const sessionInsert = await this.supabase.client.from('sessions').insert({
-        session_id: sessionId,
-        user_id: user.id,
-        refresh_token: session.refresh_token,
-        refresh_token_expires_at: new Date(session.expires_at * 1000),
-        user_agent: metadata.userAgent,
-        ip_address: metadata.ipAddress,
-        browser: metadata.browser,
-        os: metadata.os,
-        device_type: metadata.deviceType,
-      });
-
-      if (sessionInsert.error) {
-        this.logger.error(
-          `Failed to store session for user ${user.id}`,
-          sessionInsert.error,
-        );
-        // Continue with login even if session storage fails
-      } else {
-        this.logger.log(`Session stored successfully for user ${user.id}`);
-      }
-
-      // Return access token, session_id, and user info to frontend
+      // Return tokens directly - frontend handles refresh with Supabase
       return {
         success: true,
         message: 'Logged in successfully with Google.',
         session: {
           access_token: session.access_token,
+          refresh_token: session.refresh_token,
           expires_at: session.expires_at,
-          session_id: sessionId,
         },
         user: {
           id: user.id,
@@ -208,37 +145,10 @@ export class AuthService {
     }
   }
 
-  async getSessions(userId: string) {
-    const { data } = await this.supabase.client
-      .from('sessions')
-      .select('session_id, created_at, user_agent, ip_address, device_type, browser, os, last_refreshed_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    return {
-      success: true,
-      sessions: data || [],
-    };
-  }
-
-  async revokeSession(userId: string, sessionId: string) {
-    await this.supabase.client
-      .from('sessions')
-      .delete()
-      .eq('session_id', sessionId)
-      .eq('user_id', userId); // Ensure user can only delete their own sessions
-
-    return {
-      success: true,
-      message: 'Session revoked successfully',
-    };
-  }
-
-  async logout(sessionId: string) {
-    await this.supabase.client
-      .from('sessions')
-      .delete()
-      .eq('session_id', sessionId);
+  async logout() {
+    // With stateless JWT, logout is handled on frontend by clearing tokens
+    // Optionally call Supabase to invalidate server-side
+    await this.supabase.client.auth.signOut();
 
     return {
       success: true,

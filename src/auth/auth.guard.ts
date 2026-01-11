@@ -3,103 +3,55 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
-import { SupabaseService } from '../supabase/supabase.service';
+import { Request } from 'express';
+import * as jwt from 'jsonwebtoken';
+
+interface JwtPayload {
+  sub: string;
+  exp: number;
+  iat: number;
+  email?: string;
+  [key: string]: unknown;
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly supabase: SupabaseService) {}
+  private readonly logger = new Logger(AuthGuard.name);
+  private readonly JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    const res = context.switchToHttp().getResponse<Response>();
+    const token = req.headers.authorization?.replace('Bearer ', '');
 
-    const authHeader = req.headers.authorization;
-    const sessionId = req.headers['x-session-id'] as string;
-
-    if (!authHeader) {
-      throw new UnauthorizedException('Missing authorization header');
+    if (!token) {
+      throw new UnauthorizedException('Missing access token');
     }
 
-    const accessToken = authHeader.replace('Bearer ', '');
+    if (!this.JWT_SECRET) {
+      this.logger.error('SUPABASE_JWT_SECRET not configured');
+      throw new UnauthorizedException('Server configuration error');
+    }
 
-    // 1️⃣ Try normal access token validation
-    const { data, error } = await this.supabase.client.auth.getUser(
-      accessToken,
-    );
+    try {
+      const payload = jwt.verify(token, this.JWT_SECRET, {
+        algorithms: ['HS256'],
+      }) as JwtPayload;
 
-    if (!error && data?.user) {
-      req['user'] = { id: data.user.id };
+      // Attach user to request
+      req['user'] = {
+        id: payload.sub,
+        email: payload.email,
+      };
+
+      this.logger.debug(`Auth successful for user ${payload.sub}`);
       return true;
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token expired');
+      }
+      throw new UnauthorizedException('Invalid token');
     }
-
-    // 2️⃣ Access token invalid → refresh using SESSION ID (no JWT decoding!)
-    if (!sessionId) {
-      throw new UnauthorizedException('Session ID required for token refresh');
-    }
-
-    const { data: session, error: sessionError } =
-      await this.supabase.client
-        .from('sessions')
-        .select('*')
-        .eq('session_id', sessionId)
-        .single();
-
-    if (sessionError || !session) {
-      throw new UnauthorizedException('Session expired. Please login again.');
-    }
-
-    // 🔒 SECURITY CHECK: Verify refresh token hasn't expired
-    const refreshTokenExpiry = new Date(session.refresh_token_expires_at);
-    if (refreshTokenExpiry < new Date()) {
-      // Refresh token is expired, clean up and reject
-      await this.supabase.client
-        .from('sessions')
-        .delete()
-        .eq('session_id', sessionId);
-
-      throw new UnauthorizedException('Session expired, please login again');
-    }
-
-    // 3️⃣ Refresh token using Supabase
-    const refreshResult = await this.supabase.client.auth.refreshSession({
-      refresh_token: session.refresh_token,
-    });
-
-    if (
-      refreshResult.error ||
-      !refreshResult.data?.session ||
-      !refreshResult.data?.user
-    ) {
-      // cleanup dead session
-      await this.supabase.client
-        .from('sessions')
-        .delete()
-        .eq('session_id', sessionId);
-
-      throw new UnauthorizedException('Session expired. Please login again.');
-    }
-
-    const newSession = refreshResult.data.session;
-    if (!newSession.expires_at) {
-      throw new UnauthorizedException('Invalid session data');
-    }
-
-    // 4️⃣ Update DB with rotated refresh token
-    await this.supabase.client
-      .from('sessions')
-      .update({
-        refresh_token: newSession.refresh_token,
-        refresh_token_expires_at: new Date(newSession.expires_at * 1000),
-        last_refreshed_at: new Date(),
-      })
-      .eq('session_id', sessionId);
-
-    // 5️⃣ Send new access token to frontend
-    res.setHeader('x-access-token', newSession.access_token);
-
-    req['user'] = { id: refreshResult.data.user.id };
-    return true;
   }
 }

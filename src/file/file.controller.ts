@@ -16,15 +16,14 @@ import {
   ApiResponse,
   ApiConsumes,
   ApiBody,
-  ApiHeader,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { SwaggerResponses, SwaggerHeaders, SwaggerBodies } from './swagger/file-responses';
+import { SwaggerResponses, SwaggerBodies } from './swagger/file-responses';
 
 @ApiTags('File Management')
 @Controller('file')
 export class FileController {
-  constructor(private readonly fileService: FileService) {}
+  constructor(private readonly fileService: FileService) { }
 
   @UseGuards(AuthGuard)
   @Post('upload')
@@ -32,12 +31,10 @@ export class FileController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Upload an image file',
-    description: 'Upload an image to Cloudinary. Returns secure URL and public ID. Supports automatic token refresh.',
+    description: 'Upload an image to Cloudinary. Returns secure URL and public ID.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody(SwaggerBodies.upload)
-  @ApiHeader(SwaggerHeaders.authorization)
-  @ApiHeader(SwaggerHeaders.sessionId)
   @ApiResponse(SwaggerResponses.upload.success)
   @ApiResponse(SwaggerResponses.upload.badRequest)
   @ApiResponse(SwaggerResponses.upload.unauthorized)
@@ -62,10 +59,8 @@ export class FileController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Delete an uploaded file',
-    description: 'Delete a file from Cloudinary using its public ID. Requires authentication.',
+    description: 'Delete a file from Cloudinary using its public ID.',
   })
-  @ApiHeader(SwaggerHeaders.authorization)
-  @ApiHeader(SwaggerHeaders.sessionId)
   @ApiResponse(SwaggerResponses.delete.success)
   @ApiResponse(SwaggerResponses.delete.notFound)
   @ApiResponse(SwaggerResponses.delete.badRequest)
@@ -99,7 +94,6 @@ export class FileController {
       return {
         success: false,
         message: error.message || 'Failed to delete file',
-        details: error,
       };
     }
   }

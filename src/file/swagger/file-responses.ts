@@ -8,27 +8,17 @@ export const SwaggerResponses = {
       schema: {
         type: 'object',
         properties: {
-          success: { 
-            type: 'boolean', 
-            example: true,
-            description: 'Upload status'
-          },
+          success: { type: 'boolean', example: true },
           url: {
             type: 'string',
             example: 'https://res.cloudinary.com/demo/image/upload/v1234567890/user_uploads/abc123.jpg',
             description: 'Cloudinary secure URL of uploaded file'
           },
-          publicId: { 
-            type: 'string', 
+          publicId: {
+            type: 'string',
             example: 'user_uploads/abc123',
             description: 'Cloudinary public ID (used for deletion)'
           },
-        },
-      },
-      headers: {
-        'x-access-token': {
-          description: 'New access token (if token was refreshed during upload)',
-          schema: { type: 'string' },
         },
       },
     },
@@ -39,22 +29,18 @@ export const SwaggerResponses = {
         type: 'object',
         properties: {
           success: { type: 'boolean', example: false },
-          message: { 
-            type: 'string', 
-            example: 'Upload failed',
-            description: 'Error message'
-          },
+          message: { type: 'string', example: 'Upload failed' },
         },
       },
     },
     unauthorized: {
       status: 401,
-      description: 'Unauthorized - Missing or invalid authentication',
+      description: 'Unauthorized - Missing or invalid token',
       schema: {
         type: 'object',
         properties: {
           statusCode: { type: 'number', example: 401 },
-          message: { type: 'string', example: 'Missing authentication headers' },
+          message: { type: 'string', example: 'Missing access token' },
           error: { type: 'string', example: 'Unauthorized' },
         },
       },
@@ -64,34 +50,19 @@ export const SwaggerResponses = {
   // Delete file responses
   delete: {
     success: {
-      status: 200,
+      status: 201,
       description: 'File deleted successfully from Cloudinary.',
       schema: {
         type: 'object',
         properties: {
-          success: { 
-            type: 'boolean', 
-            example: true,
-            description: 'Deletion status'
-          },
-          message: { 
-            type: 'string', 
-            example: 'File deleted successfully',
-            description: 'Success message'
-          },
-          result: { 
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'File deleted successfully' },
+          result: {
             type: 'object',
-            description: 'Cloudinary delete result',
             properties: {
               result: { type: 'string', example: 'ok' },
             }
           },
-        },
-      },
-      headers: {
-        'x-access-token': {
-          description: 'New access token (if token was refreshed)',
-          schema: { type: 'string' },
         },
       },
     },
@@ -102,18 +73,7 @@ export const SwaggerResponses = {
         type: 'object',
         properties: {
           success: { type: 'boolean', example: false },
-          message: { 
-            type: 'string', 
-            example: 'File not found',
-            description: 'Error message'
-          },
-          result: { 
-            type: 'object',
-            description: 'Cloudinary response',
-            properties: {
-              result: { type: 'string', example: 'not found' },
-            }
-          },
+          message: { type: 'string', example: 'File not found' },
         },
       },
     },
@@ -124,46 +84,22 @@ export const SwaggerResponses = {
         type: 'object',
         properties: {
           success: { type: 'boolean', example: false },
-          message: { 
-            type: 'string', 
-            example: 'Failed to delete file',
-            description: 'Error message'
-          },
-          result: { 
-            type: 'object',
-            description: 'Cloudinary delete result'
-          },
+          message: { type: 'string', example: 'Failed to delete file' },
         },
       },
     },
     unauthorized: {
       status: 401,
-      description: 'Unauthorized - Invalid authentication',
+      description: 'Unauthorized - Invalid token',
       schema: {
         type: 'object',
         properties: {
           statusCode: { type: 'number', example: 401 },
-          message: { type: 'string', example: 'Missing authentication headers' },
+          message: { type: 'string', example: 'Invalid or expired token' },
           error: { type: 'string', example: 'Unauthorized' },
         },
       },
     },
-  },
-};
-
-// Header definitions
-export const SwaggerHeaders = {
-  authorization: {
-    name: 'Authorization',
-    description: 'Bearer token (access_token from login)',
-    required: true,
-    example: 'Bearer eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ...',
-  },
-  sessionId: {
-    name: 'X-Session-Id',
-    description: 'Session ID from login response',
-    required: true,
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   },
 };
 
