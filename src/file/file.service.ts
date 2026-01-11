@@ -32,4 +32,21 @@ export class FileService {
   async deleteImage(publicId: string) {
     return cloudinary.uploader.destroy(publicId);
   }
+
+  /**
+   * Fire-and-forget deletion - returns immediately while deletion happens in background
+   * Use this for faster API responses when you don't need confirmation
+   */
+  deleteImageAsync(publicId: string): void {
+    cloudinary.uploader.destroy(publicId).catch((error) => {
+      console.error(`Background delete failed for ${publicId}:`, error.message);
+    });
+  }
+
+  /**
+   * Bulk delete multiple images - more efficient than individual deletes
+   */
+  async deleteImagesInBulk(publicIds: string[]) {
+    return cloudinary.api.delete_resources(publicIds);
+  }
 }

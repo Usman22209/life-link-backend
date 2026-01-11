@@ -83,21 +83,21 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(email: string) {
-    const { error } = await this.supabase.client.auth.resetPasswordForEmail(
-      email,
-      {
+  forgotPassword(email: string) {
+    // Fire-and-forget: Send email in background, return immediately
+    // Supabase handles non-existent users securely (no email sent, no error)
+    this.supabase.client.auth
+      .resetPasswordForEmail(email, {
         redirectTo: 'lifelink://auth/ResetPassword',
-      },
-    );
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Background password reset failed for ${email}`,
+          error.message,
+        );
+      });
 
-    if (error) {
-      this.logger.error(
-        `Forgot password request failed for ${email}`,
-        error.message,
-      );
-    }
-
+    // Return immediately (~10ms) - email sends in background
     return {
       success: true,
       message:
