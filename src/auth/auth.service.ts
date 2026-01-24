@@ -79,6 +79,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
+        is_onboarded: user.app_metadata?.is_onboarded || false,
       },
     };
   }
@@ -136,6 +137,7 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
+          is_onboarded: user.app_metadata?.is_onboarded || false,
         },
       };
     } catch (err) {

@@ -5,6 +5,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { FileModule } from './file/file.module';
+import { ProfileModule } from './profile/profile.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -21,6 +22,7 @@ import { APP_GUARD } from '@nestjs/core';
     SupabaseModule,
     AuthModule,
     FileModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [
