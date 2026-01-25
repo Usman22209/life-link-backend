@@ -2,6 +2,11 @@ import { IsString, IsOptional, IsEnum, IsDateString, IsNumber, IsBoolean } from 
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
+  @ApiPropertyOptional({ description: 'User full name' })
+  @IsOptional()
+  @IsString()
+  full_name?: string;
+
   @ApiPropertyOptional({ description: 'User phone number' })
   @IsOptional()
   @IsString()
