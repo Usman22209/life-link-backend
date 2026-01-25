@@ -180,4 +180,37 @@ export class AuthService {
       },
     };
   }
+
+  async refreshSession(refreshToken: string) {
+    const { data, error } = await this.supabase.client.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error) {
+      this.logger.warn('Token refresh failed', error.message);
+      throw new UnauthorizedException('Invalid or expired refresh token.');
+    }
+
+    const { session, user } = data;
+
+    if (!session || !user) {
+      throw new UnauthorizedException('Invalid session data during refresh.');
+    }
+
+    return {
+      success: true,
+      message: 'Token refreshed successfully.',
+      session: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        email_confirmed_at: user.email_confirmed_at,
+        is_onboarded: user.app_metadata?.is_onboarded || false,
+      },
+    };
+  }
 }

@@ -133,6 +133,48 @@ export const SwaggerResponses = {
     },
   },
 
+  // Refresh token
+  refresh: {
+    success: {
+      status: 201,
+      description: 'Token refreshed successfully.',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'Token refreshed successfully.' },
+          session: {
+            type: 'object',
+            properties: {
+              access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIs...' },
+              refresh_token: { type: 'string', example: 'v1.refresh_token...' },
+              expires_at: { type: 'number', example: 1766308296 },
+            },
+          },
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '670e4560-123b-4bea-9953-f336c3e01b0b' },
+              email: { type: 'string', example: 'user@example.com' },
+            },
+          },
+        },
+      },
+    },
+    unauthorized: {
+      status: 401,
+      description: 'Unauthorized - Invalid or expired refresh token',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 401 },
+          message: { type: 'string', example: 'Invalid or expired refresh token.' },
+          error: { type: 'string', example: 'Unauthorized' },
+        },
+      },
+    },
+  },
+
   // Logout
   logout: {
     success: {
