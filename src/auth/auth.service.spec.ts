@@ -13,6 +13,7 @@ const mockSupabaseClient = {
     signOut: jest.fn(),
     admin: {
       updateUserById: jest.fn(),
+      signOut: jest.fn(),
     },
   },
 };
@@ -193,14 +194,15 @@ describe('AuthService', () => {
 
   // ==================== LOGOUT TESTS ====================
   describe('logout', () => {
-    it('should call Supabase signOut', async () => {
-      mockSupabaseClient.auth.signOut.mockResolvedValue({ error: null });
+    it('should call Supabase admin.signOut', async () => {
+      const userId = 'user-123';
+      mockSupabaseClient.auth.admin.signOut.mockResolvedValue({ error: null });
 
-      const result = await service.logout();
+      const result = await service.logout(userId);
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('Logged out successfully');
-      expect(mockSupabaseClient.auth.signOut).toHaveBeenCalled();
+      expect(mockSupabaseClient.auth.admin.signOut).toHaveBeenCalledWith(userId);
     });
   });
 

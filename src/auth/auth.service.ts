@@ -146,14 +146,17 @@ export class AuthService {
     }
   }
 
-  async logout() {
-    // With stateless JWT, logout is handled on frontend by clearing tokens
-    // Optionally call Supabase to invalidate server-side
-    await this.supabase.client.auth.signOut();
+  async logout(userId: string) {
+    this.logger.log(`Logout requested for user ${userId}`);
+    const { error } = await this.supabase.client.auth.admin.signOut(userId);
+
+    if (error) {
+      this.logger.error(`Logout failed for user ${userId}`, error.message);
+    }
 
     return {
       success: true,
-      message: 'Logged out successfully.',
+      message: 'Logged out successfully. All sessions revoked.',
     };
   }
 

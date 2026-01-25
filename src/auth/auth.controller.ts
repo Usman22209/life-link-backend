@@ -75,10 +75,10 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Logout user',
-    description: 'Invalidate session on server. Frontend should also clear stored tokens.',
+    description: 'Invalidate all sessions and refresh tokens on the server for this user.',
   })
   @ApiResponse(SwaggerResponses.logout.success)
-  logout() {
-    return this.authService.logout();
+  logout(@Req() req: any) {
+    return this.authService.logout(req.user.id);
   }
 }
