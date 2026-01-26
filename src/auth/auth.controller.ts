@@ -91,7 +91,6 @@ export class AuthController {
   @ApiResponse(SwaggerResponses.refresh.success)
   @ApiResponse(SwaggerResponses.refresh.unauthorized)
   refresh(@Body() dto: RefreshTokenDto) {
-    console.log('Refresh DTO received:', dto);
     return this.authService.refreshSession(dto.refresh_token);
   }
 }
