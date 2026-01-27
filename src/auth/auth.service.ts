@@ -27,7 +27,7 @@ export class AuthService {
     if (error) {
       this.logger.error(`Signup failed for ${dto.email}`, error.message);
       throw new BadRequestException(
-        'We could not create your account. Please try again later.',
+        `We could not create your account: ${error.message}`,
       );
     }
 
@@ -46,7 +46,7 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.warn(`Login failed for ${dto.email}`);
+      this.logger.warn(`Login failed for ${dto.email}: ${error.message}`);
 
       if (error.code === 'email_not_confirmed') {
         throw new UnauthorizedException(
@@ -55,7 +55,7 @@ export class AuthService {
       }
 
       throw new UnauthorizedException(
-        'Incorrect email or password. Please try again.',
+        `Login failed: ${error.message}`,
       );
     }
 
@@ -116,7 +116,7 @@ export class AuthService {
 
       if (error) {
         this.logger.warn('Google login failed', error.message);
-        throw new UnauthorizedException('Google login failed.');
+        throw new UnauthorizedException(`Google login failed: ${error.message}`);
       }
 
       const { user, session } = data;
@@ -142,7 +142,7 @@ export class AuthService {
       };
     } catch (err) {
       this.logger.error('Google login error', err.message);
-      throw new UnauthorizedException('Google login failed.');
+      throw new UnauthorizedException(`Google login failed: ${err.message}`);
     }
   }
 
@@ -168,7 +168,7 @@ export class AuthService {
 
     if (error) {
       this.logger.error(`Password reset failed for user ${userId}`, error.message);
-      throw new BadRequestException('Failed to reset password. Link may be expired.');
+      throw new BadRequestException(`Failed to reset password: ${error.message}`);
     }
 
     return {
@@ -188,7 +188,7 @@ export class AuthService {
 
     if (error) {
       this.logger.warn('Token refresh failed', error.message);
-      throw new UnauthorizedException('Invalid or expired refresh token.');
+      throw new UnauthorizedException(`Invalid or expired refresh token: ${error.message}`);
     }
 
     const { session, user } = data;
