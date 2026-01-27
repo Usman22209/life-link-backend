@@ -37,10 +37,10 @@ export class UpdateProfileDto {
   @IsString()
   state?: string;
 
-  @ApiPropertyOptional({ description: 'User city' })
+  @ApiPropertyOptional({ description: 'User city ID' })
   @IsOptional()
   @IsString()
-  city?: string;
+  city_id?: string;
 
   @ApiPropertyOptional({ description: 'Latitude for location' })
   @IsOptional()
