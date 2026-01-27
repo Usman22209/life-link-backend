@@ -20,7 +20,7 @@ export class ProfileService {
             if (error.code === 'PGRST116') {
                 throw new NotFoundException('Profile not found');
             }
-            throw new BadRequestException('Could not fetch profile');
+            throw new BadRequestException(`Could not fetch profile: ${error.message}`);
         }
 
         return {
@@ -43,7 +43,7 @@ export class ProfileService {
 
         if (error) {
             this.logger.error(`Error updating profile for user ${userId}`, error.message);
-            throw new BadRequestException('Could not update profile');
+            throw new BadRequestException(`Could not update profile: ${error.message}`);
         }
 
         return {
