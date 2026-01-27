@@ -6,6 +6,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthGuard } from './auth.guard';
 import { SwaggerResponses } from './swagger/auth-responses';
 
@@ -75,10 +76,21 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Logout user',
-    description: 'Invalidate session on server. Frontend should also clear stored tokens.',
+    description: 'Invalidate all sessions and refresh tokens on the server for this user.',
   })
   @ApiResponse(SwaggerResponses.logout.success)
-  logout() {
-    return this.authService.logout();
+  logout(@Req() req: any) {
+    return this.authService.logout(req.user.id);
+  }
+
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Exchange a valid refresh token for a new access token and refresh token.',
+  })
+  @ApiResponse(SwaggerResponses.refresh.success)
+  @ApiResponse(SwaggerResponses.refresh.unauthorized)
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshSession(dto.refresh_token);
   }
 }

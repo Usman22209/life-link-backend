@@ -27,7 +27,7 @@ export class AuthService {
     if (error) {
       this.logger.error(`Signup failed for ${dto.email}`, error.message);
       throw new BadRequestException(
-        'We could not create your account. Please try again later.',
+        `We could not create your account: ${error.message}`,
       );
     }
 
@@ -46,7 +46,7 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.warn(`Login failed for ${dto.email}`);
+      this.logger.warn(`Login failed for ${dto.email}: ${error.message}`);
 
       if (error.code === 'email_not_confirmed') {
         throw new UnauthorizedException(
@@ -55,7 +55,7 @@ export class AuthService {
       }
 
       throw new UnauthorizedException(
-        'Incorrect email or password. Please try again.',
+        `Login failed: ${error.message}`,
       );
     }
 
@@ -79,6 +79,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
+        is_onboarded: user.app_metadata?.is_onboarded || false,
       },
     };
   }
@@ -115,7 +116,7 @@ export class AuthService {
 
       if (error) {
         this.logger.warn('Google login failed', error.message);
-        throw new UnauthorizedException('Google login failed.');
+        throw new UnauthorizedException(`Google login failed: ${error.message}`);
       }
 
       const { user, session } = data;
@@ -136,22 +137,26 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
+          is_onboarded: user.app_metadata?.is_onboarded || false,
         },
       };
     } catch (err) {
       this.logger.error('Google login error', err.message);
-      throw new UnauthorizedException('Google login failed.');
+      throw new UnauthorizedException(`Google login failed: ${err.message}`);
     }
   }
 
-  async logout() {
-    // With stateless JWT, logout is handled on frontend by clearing tokens
-    // Optionally call Supabase to invalidate server-side
-    await this.supabase.client.auth.signOut();
+  async logout(userId: string) {
+    this.logger.log(`Logout requested for user ${userId}`);
+    const { error } = await this.supabase.client.auth.admin.signOut(userId);
+
+    if (error) {
+      this.logger.error(`Logout failed for user ${userId}`, error.message);
+    }
 
     return {
       success: true,
-      message: 'Logged out successfully.',
+      message: 'Logged out successfully. All sessions revoked.',
     };
   }
 
@@ -163,7 +168,7 @@ export class AuthService {
 
     if (error) {
       this.logger.error(`Password reset failed for user ${userId}`, error.message);
-      throw new BadRequestException('Failed to reset password. Link may be expired.');
+      throw new BadRequestException(`Failed to reset password: ${error.message}`);
     }
 
     return {
@@ -172,6 +177,39 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email,
+      },
+    };
+  }
+
+  async refreshSession(refreshToken: string) {
+    const { data, error } = await this.supabase.client.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error) {
+      this.logger.warn('Token refresh failed', error.message);
+      throw new UnauthorizedException(`Invalid or expired refresh token: ${error.message}`);
+    }
+
+    const { session, user } = data;
+
+    if (!session || !user) {
+      throw new UnauthorizedException('Invalid session data during refresh.');
+    }
+
+    return {
+      success: true,
+      message: 'Token refreshed successfully.',
+      session: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        email_confirmed_at: user.email_confirmed_at,
+        is_onboarded: user.app_metadata?.is_onboarded || false,
       },
     };
   }

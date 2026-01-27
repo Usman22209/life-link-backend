@@ -15,6 +15,12 @@ export class SupabaseService {
       );
     }
 
-    this.client = createClient(url, key);
+    this.client = createClient(url, key, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
   }
 }
