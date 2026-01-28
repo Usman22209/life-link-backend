@@ -6,16 +6,16 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { FileModule } from './file/file.module';
 import { ProfileModule } from './profile/profile.module';
+import { NotificationModule } from './notification/notification.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    // Rate limiting: 100 requests per minute per IP
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 1 minute in milliseconds
-        limit: 100, // 100 requests per minute
+        ttl: 60000,
+        limit: 100,
       },
     ]),
     ConfigModule.forRoot(),
@@ -23,11 +23,11 @@ import { APP_GUARD } from '@nestjs/core';
     AuthModule,
     FileModule,
     ProfileModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Enable rate limiting globally
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

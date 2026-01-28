@@ -66,7 +66,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid session data');
     }
 
-    // Return tokens directly - frontend handles refresh with Supabase
     return {
       success: true,
       message: 'You are logged in successfully.',
@@ -85,8 +84,6 @@ export class AuthService {
   }
 
   forgotPassword(email: string) {
-    // Fire-and-forget: Send email in background, return immediately
-    // Supabase handles non-existent users securely (no email sent, no error exposed)
     this.supabase.client.auth
       .resetPasswordForEmail(email, {
         redirectTo: 'lifelink://auth/ResetPassword',
@@ -125,7 +122,6 @@ export class AuthService {
         throw new UnauthorizedException('Invalid session data');
       }
 
-      // Return tokens directly - frontend handles refresh with Supabase
       return {
         success: true,
         message: 'Logged in successfully with Google.',
