@@ -13,12 +13,6 @@ export class NotificationService {
         this.apiKey = this.configService.get<string>('ONE_SIGNAL_API_KEY');
     }
 
-    /**
-     * Sends a push notification to a specific user using their external_user_id.
-     * @param userId The external_user_id (usually the Supabase user ID)
-     * @param title The heading of the notification
-     * @param content The main message content
-     */
     async sendToUser(userId: string, title: string, content: string) {
         if (!this.apiKey || !this.appId) {
             this.logger.error('OneSignal credentials are missing in environment variables');
