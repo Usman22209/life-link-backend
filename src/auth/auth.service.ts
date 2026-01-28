@@ -66,7 +66,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid session data');
     }
 
-    // Return tokens directly - frontend handles refresh with Supabase
     return {
       success: true,
       message: 'You are logged in successfully.',
