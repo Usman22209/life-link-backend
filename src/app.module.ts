@@ -9,6 +9,8 @@ import { ProfileModule } from './profile/profile.module';
 import { NotificationModule } from './notification/notification.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { BloodRequestModule } from './blood-request/blood-request.module';
+import { DonationModule } from './donation/donation.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { APP_GUARD } from '@nestjs/core';
     FileModule,
     ProfileModule,
     NotificationModule,
+    BloodRequestModule,
+    DonationModule,
   ],
   controllers: [AppController],
   providers: [
