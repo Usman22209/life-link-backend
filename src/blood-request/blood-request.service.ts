@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger, ForbiddenEx
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
 import { UpdateBloodRequestDto, BloodRequestStatus } from './dto/update-blood-request.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Injectable()
 export class BloodRequestService {
@@ -32,8 +33,18 @@ export class BloodRequestService {
         };
     }
 
-    async getFeed() {
-        // Feed only shows 'open' requests and limited summary data
+    async getFeed(pagination: PaginationDto) {
+        // 1. Get total count for metadata
+        const { count, error: countError } = await this.supabase.client
+            .from('blood_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', BloodRequestStatus.OPEN);
+
+        if (countError) {
+            throw new BadRequestException(`Could not fetch count: ${countError.message}`);
+        }
+
+        // 2. Fetch paginated data
         const { data, error } = await this.supabase.client
             .from('blood_requests')
             .select(`
@@ -52,34 +63,66 @@ export class BloodRequestService {
         requester:profiles(full_name, profile_image)
       `)
             .eq('status', BloodRequestStatus.OPEN)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(pagination.skip, pagination.skip + (pagination.limit ?? 10) - 1);
 
         if (error) {
             this.logger.error(`Error fetching blood request feed`, error.message);
             throw new BadRequestException(`Could not fetch feed: ${error.message}`);
         }
 
+        const total = count ?? 0;
+        const limit = pagination.limit ?? 10;
+        const totalPages = Math.ceil(total / limit);
+
         return {
             success: true,
             data,
+            meta: {
+                total,
+                page: pagination.page,
+                limit,
+                totalPages,
+            }
         };
     }
 
-    async getMyRequests(userId: string) {
+    async getMyRequests(userId: string, pagination: PaginationDto) {
+        // 1. Get total count
+        const { count, error: countError } = await this.supabase.client
+            .from('blood_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('requester_id', userId);
+
+        if (countError) {
+            throw new BadRequestException(`Could not fetch count: ${countError.message}`);
+        }
+
         const { data, error } = await this.supabase.client
             .from('blood_requests')
             .select('*')
             .eq('requester_id', userId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(pagination.skip, pagination.skip + (pagination.limit ?? 10) - 1);
 
         if (error) {
             this.logger.error(`Error fetching my blood requests for user ${userId}`, error.message);
             throw new BadRequestException(`Could not fetch your requests: ${error.message}`);
         }
 
+        const total = count ?? 0;
+        const limit = pagination.limit ?? 10;
+        const totalPages = Math.ceil(total / limit);
+
         return {
             success: true,
             data,
+            meta: {
+                total,
+                page: pagination.page,
+                limit,
+                totalPages,
+            }
         };
     }
 

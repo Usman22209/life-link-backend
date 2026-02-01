@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BloodRequestService } from './blood-request.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
 import { UpdateBloodRequestDto } from './dto/update-blood-request.dto';
+import { PaginationDto } from './dto/pagination.dto';
 import { AuthGuard } from '../auth/auth.guard';
 
 @ApiTags('Blood Requests')
@@ -20,19 +21,19 @@ export class BloodRequestController {
     }
 
     @Get('feed')
-    @ApiOperation({ summary: 'Get all open blood requests' })
+    @ApiOperation({ summary: 'Get all open blood requests (Paginated)' })
     @ApiResponse({ status: 200, description: 'Feed fetched successfully' })
-    getFeed() {
-        return this.bloodRequestService.getFeed();
+    getFeed(@Query() pagination: PaginationDto) {
+        return this.bloodRequestService.getFeed(pagination);
     }
 
     @Get('my')
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get current user\'s blood requests' })
+    @ApiOperation({ summary: 'Get current user\'s blood requests (Paginated)' })
     @ApiResponse({ status: 200, description: 'My requests fetched successfully' })
-    getMyRequests(@Req() req: any) {
-        return this.bloodRequestService.getMyRequests(req.user.id);
+    getMyRequests(@Req() req: any, @Query() pagination: PaginationDto) {
+        return this.bloodRequestService.getMyRequests(req.user.id, pagination);
     }
 
     @Get(':id')
