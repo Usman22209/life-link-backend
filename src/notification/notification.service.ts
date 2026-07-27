@@ -1,5 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '../supabase/supabase.service';
+import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
+
+function timeAgo(date: string | Date): string {
+    if (!date) return 'Just now';
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
 
 @Injectable()
 export class NotificationService {
@@ -8,15 +22,38 @@ export class NotificationService {
     private readonly apiKey: string | undefined;
     private readonly apiUrl = 'https://api.onesignal.com/api/v1/notifications';
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private configService: ConfigService,
+        private supabase: SupabaseService,
+    ) {
         this.appId = this.configService.get<string>('ONESIGNAL_APP_ID');
         this.apiKey = this.configService.get<string>('ONE_SIGNAL_API_KEY');
     }
 
-    async sendToUser(userId: string, title: string, content: string) {
+    async sendToUser(userId: string, title: string, content: string, extraData: any = {}) {
+        // 1. Store in DB
+        try {
+            await this.supabase.client
+                .from('notifications')
+                .insert({
+                    user_id: userId,
+                    type: extraData.type || 'system',
+                    title,
+                    body: content,
+                    is_read: false,
+                    urgency: extraData.urgency,
+                    blood_group: extraData.bloodType || extraData.blood_group,
+                    hospital_name: extraData.hospital || extraData.hospital_name,
+                    request_id: extraData.request_id,
+                });
+        } catch (dbErr) {
+            this.logger.warn(`Failed to insert notification record in DB: ${dbErr.message}`);
+        }
+
+        // 2. Push via OneSignal
         if (!this.apiKey || !this.appId) {
-            this.logger.error('OneSignal credentials are missing in environment variables');
-            return { success: false, error: 'Configuration missing' };
+            this.logger.warn('OneSignal credentials missing in environment variables');
+            return { success: true };
         }
 
         try {
@@ -31,21 +68,121 @@ export class NotificationService {
                     include_external_user_ids: [userId],
                     headings: { en: title },
                     contents: { en: content },
+                    data: extraData,
                 }),
             });
 
             const data = await response.json();
-
-            if (!response.ok) {
-                this.logger.error(`OneSignal API error: ${JSON.stringify(data)}`);
-                return { success: false, error: data };
-            }
-
-            this.logger.log(`Notification sent to user ${userId}: ${data.id}`);
             return { success: true, id: data.id };
         } catch (error) {
-            this.logger.error(`Failed to send notification to user ${userId}`, error.stack);
-            return { success: false, error: error.message };
+            this.logger.error(`Failed to send push notification to user ${userId}`, error.stack);
+            return { success: true, error: error.message };
         }
+    }
+
+    async getNotifications(userId: string) {
+        const { data, error } = await this.supabase.client
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            this.logger.error(`Error fetching notifications for user ${userId}`, error.message);
+            throw new BadRequestException(`Could not fetch notifications: ${error.message}`);
+        }
+
+        const formatted = (data || []).map((item: any) => ({
+            id: item.id,
+            type: item.type || 'blood_request',
+            title: item.title,
+            body: item.body,
+            time: timeAgo(item.created_at),
+            read: item.is_read,
+            urgency: item.urgency,
+            bloodType: item.blood_group,
+            hospital: item.hospital_name,
+            request_id: item.request_id,
+            created_at: item.created_at,
+        }));
+
+        return {
+            success: true,
+            data: formatted,
+        };
+    }
+
+    async getUnreadCount(userId: string) {
+        const { count, error } = await this.supabase.client
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('is_read', false);
+
+        if (error) {
+            this.logger.error(`Error counting unread notifications for user ${userId}`, error.message);
+            throw new BadRequestException(`Could not get unread count: ${error.message}`);
+        }
+
+        return {
+            success: true,
+            data: {
+                unreadCount: count || 0,
+            },
+        };
+    }
+
+    async markAsRead(userId: string, notificationId: string) {
+        const { error } = await this.supabase.client
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', notificationId)
+            .eq('user_id', userId);
+
+        if (error) {
+            throw new BadRequestException(`Could not mark notification as read: ${error.message}`);
+        }
+
+        return {
+            success: true,
+            message: 'Notification marked as read.',
+        };
+    }
+
+    async markAllAsRead(userId: string) {
+        const { error } = await this.supabase.client
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', userId);
+
+        if (error) {
+            throw new BadRequestException(`Could not clear notifications: ${error.message}`);
+        }
+
+        return {
+            success: true,
+            message: 'All notifications marked as read.',
+        };
+    }
+
+    async registerDeviceToken(userId: string, dto: RegisterDeviceTokenDto) {
+        const { error } = await this.supabase.client
+            .from('profiles')
+            .update({
+                device_token: dto.device_token,
+                device_platform: dto.platform || 'android',
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', userId);
+
+        if (error) {
+            this.logger.error(`Error registering device token for user ${userId}`, error.message);
+            throw new BadRequestException(`Could not register device token: ${error.message}`);
+        }
+
+        return {
+            success: true,
+            message: 'Device push token registered successfully.',
+        };
     }
 }

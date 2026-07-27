@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BloodRequestService } from './blood-request.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
 import { UpdateBloodRequestDto } from './dto/update-blood-request.dto';
@@ -21,10 +21,24 @@ export class BloodRequestController {
     }
 
     @Get('feed')
-    @ApiOperation({ summary: 'Get all open blood requests (Paginated)' })
+    @ApiOperation({ summary: 'Get all open blood requests (Paginated & Filterable)' })
     @ApiResponse({ status: 200, description: 'Feed fetched successfully' })
-    getFeed(@Query() pagination: PaginationDto) {
-        return this.bloodRequestService.getFeed(pagination);
+    getFeed(@Query() query: PaginationDto) {
+        return this.bloodRequestService.getFeed(query);
+    }
+
+    @Get('urgent')
+    @ApiOperation({ summary: 'Get top urgent blood requests for homepage carousel' })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'lat', required: false, type: Number })
+    @ApiQuery({ name: 'lng', required: false, type: Number })
+    @ApiResponse({ status: 200, description: 'Urgent requests fetched successfully' })
+    getUrgent(
+        @Query('limit') limit?: number,
+        @Query('lat') lat?: number,
+        @Query('lng') lng?: number,
+    ) {
+        return this.bloodRequestService.getUrgentRequests(limit ? Number(limit) : 5, lat ? Number(lat) : undefined, lng ? Number(lng) : undefined);
     }
 
     @Get('my')

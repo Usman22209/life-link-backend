@@ -69,13 +69,93 @@ export class DonationService {
 
         return {
             success: true,
-            message: 'You have successfully offered to help!',
+            message: 'Donation intent registered.',
             data: donation,
         };
     }
 
+    async getMyDonations(donorId: string) {
+        const { data, error } = await this.supabase.client
+            .from('donations')
+            .select(`
+                id,
+                created_at,
+                updated_at,
+                status,
+                request:blood_requests(
+                    id,
+                    patient_name,
+                    hospital_name,
+                    city_id,
+                    blood_group,
+                    units_required,
+                    urgency,
+                    created_at
+                )
+            `)
+            .eq('donor_id', donorId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            this.logger.error(`Error fetching donations for donor ${donorId}`, error.message);
+            throw new BadRequestException(`Could not fetch donations: ${error.message}`);
+        }
+
+        const completedDonations = (data || []).filter((d: any) => d.status === 'completed');
+        const totalDonations = completedDonations.length;
+        const totalUnits = totalDonations; // 1 unit per donation by default
+        const livesSaved = totalUnits * 3;
+
+        let lastDonationDate: string | null = null;
+        let isEligible = true;
+        let nextEligibleDateStr: string | null = null;
+
+        if (completedDonations.length > 0) {
+            const lastRecord = completedDonations[0];
+            const dateObj = new Date(lastRecord.updated_at || lastRecord.created_at);
+            lastDonationDate = dateObj.toISOString().split('T')[0];
+
+            const nextEligible = new Date(dateObj);
+            nextEligible.setDate(nextEligible.getDate() + 90);
+            isEligible = new Date() >= nextEligible;
+            nextEligibleDateStr = nextEligible.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        const history = (data || []).map((d: any) => ({
+            id: d.id,
+            hospitalName: d.request?.hospital_name || 'Hospital',
+            date: (d.updated_at || d.created_at).split('T')[0],
+            units: 1,
+            bloodType: d.request?.blood_group || 'O+',
+            status: d.status,
+            request: d.request ? {
+                id: d.request.id,
+                patientName: d.request.patient_name,
+                hospital: d.request.hospital_name,
+                city: d.request.city_id,
+                bloodType: d.request.blood_group,
+                units: d.request.units_required,
+                urgency: d.request.urgency,
+            } : null,
+        }));
+
+        return {
+            success: true,
+            data: {
+                stats: {
+                    totalDonations,
+                    totalUnits,
+                    livesSaved,
+                    isEligible,
+                    lastDonationDate,
+                    nextEligibleDateStr,
+                },
+                history,
+            },
+        };
+    }
+
     async getDonationsByRequest(userId: string, requestId: string) {
-        // Verify ownership of the request
         const { data: request, error: requestError } = await this.supabase.client
             .from('blood_requests')
             .select('requester_id')
@@ -93,9 +173,9 @@ export class DonationService {
         const { data, error } = await this.supabase.client
             .from('donations')
             .select(`
-        *,
-        donor:profiles(id, full_name, profile_image, phone, blood_group)
-      `)
+                *,
+                donor:profiles(id, full_name, profile_image, phone, blood_group)
+            `)
             .eq('request_id', requestId)
             .order('created_at', { ascending: false });
 
@@ -103,14 +183,25 @@ export class DonationService {
             throw new BadRequestException(`Could not fetch donations: ${error.message}`);
         }
 
+        const donations = data || [];
+        const stats = {
+            total: donations.length,
+            intent: donations.filter((d: any) => d.status === 'intent').length,
+            completed: donations.filter((d: any) => d.status === 'completed').length,
+            cancelled: donations.filter((d: any) => d.status === 'cancelled').length,
+        };
+
         return {
             success: true,
-            data,
+            data: {
+                request_id: requestId,
+                donations,
+                stats,
+            },
         };
     }
 
     async updateStatus(userId: string, donationId: string, status: DonationStatus) {
-        // 1. Fetch donation and related request
         const { data: donation, error: fetchError } = await this.supabase.client
             .from('donations')
             .select('*, blood_requests(requester_id)')
@@ -122,15 +213,12 @@ export class DonationService {
         }
 
         const isDonor = donation.donor_id === userId;
-        const isRequester = donation.blood_requests.requester_id === userId;
+        const isRequester = donation.blood_requests?.requester_id === userId;
 
         if (!isDonor && !isRequester) {
             throw new ForbiddenException('You do not have permission to update this donation');
         }
 
-        // 2. Permission checks:
-        // - Only donor can cancel (intent -> cancelled)
-        // - Only requester can complete (intent -> completed)
         if (status === DonationStatus.CANCELLED && !isDonor) {
             throw new ForbiddenException('Only the donor can cancel their intent');
         }
@@ -138,7 +226,6 @@ export class DonationService {
             throw new ForbiddenException('Only the requester can mark a donation as completed');
         }
 
-        // 3. Update donation
         const { data, error } = await this.supabase.client
             .from('donations')
             .update({
@@ -155,7 +242,7 @@ export class DonationService {
 
         return {
             success: true,
-            message: `Donation status updated to ${status}`,
+            message: 'Donation status updated.',
             data,
         };
     }

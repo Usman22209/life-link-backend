@@ -1,191 +1,755 @@
 [
   {
-    "name": "Health Check",
-    "endpoint": "GET /",
-    "status": 200,
-    "timeMs": 33,
-    "success": true,
-    "data": "Hello World!"
-  },
-  {
-    "name": "Login",
+    "id": "1.2a",
+    "name": "Login Account 1 (netnetify@gmail.com)",
     "endpoint": "POST /auth/login",
     "status": 201,
-    "timeMs": 4421,
+    "timeMs": 2195,
     "success": true,
-    "data": {
+    "response": {
       "success": true,
       "message": "You are logged in successfully.",
       "session": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3l2d2NnbGp6Y25iZWt6amtnbWlhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3NDlhMDA5Zi03ZGZhLTQwYTAtYWQxMC0wMDRmZmNiNjIwNzkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3NzM2Njk2LCJpYXQiOjE3Nzc3MzMwOTcsImVtYWlsIjoibmV0bmV0bGlmeUBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJpc19vbmJvYXJkZWQiOnRydWUsInByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJuZXRuZXRsaWZ5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6Ijc0OWEwMDlmLTdkZmEtNDBhMC1hZDEwLTAwNGZmY2I2MjA3OSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzc3NzMzMDk3fV0sInNlc3Npb25faWQiOiI3MjJlNTJlZC05YWZmLTQxMjYtYjIwNi1mODFlOTQ5NjA0NTEiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yQQx0HaWC9EaCcH_Ujkvn3pwjuLLMFzjlb1enoEy1uE",
-        "refresh_token": "xz2s66jua6g3",
-        "expires_at": 1777736696
+        "access_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3l2d2NnbGp6Y25iZWt6amtnbWlhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlY2Y4YzhmMC1kZjc3LTQwZDUtYWZjNS1lMTNkZDVlNGU2ZGYiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg1MDc2NTIxLCJpYXQiOjE3ODUwNzI5MjIsImVtYWlsIjoibmV0bmV0aWZ5QGdtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJuZXRuZXRpZnlAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiZWNmOGM4ZjAtZGY3Ny00MGQ1LWFmYzUtZTEzZGQ1ZTRlNmRmIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3ODUwNzI5MjF9XSwic2Vzc2lvbl9pZCI6ImQyZWU5NjJhLTVlNzItNGYxZi1hNThkLTJhZTk4Y2FmYmYwYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.z21zvk-Bvwg5ESg0Ltb23yELTwXz4y0Ph9SlkjlYt28",
+        "refresh_token": "dp6avdolxt7o",
+        "expires_at": 1785076521
       },
       "user": {
-        "id": "749a009f-7dfa-40a0-ad10-004ffcb62079",
-        "email": "netnetlify@gmail.com",
-        "email_confirmed_at": "2026-02-01T11:42:24.091061Z",
+        "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "email": "netnetify@gmail.com",
+        "email_confirmed_at": "2026-07-26T13:35:21.661168Z",
+        "is_onboarded": false
+      }
+    }
+  },
+  {
+    "id": "1.2b",
+    "name": "Login Account 2 (usman22209@gmail.com)",
+    "endpoint": "POST /auth/login",
+    "status": 201,
+    "timeMs": 266,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "You are logged in successfully.",
+      "session": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3l2d2NnbGp6Y25iZWt6amtnbWlhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlZjY4ZjNkMS1mMjllLTQ4ZjAtODI0Ni1lOTc4Mzc0MWNjYzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg1MDc2NTIxLCJpYXQiOjE3ODUwNzI5MjIsImVtYWlsIjoidXNtYW4yMjIwOUBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJpc19vbmJvYXJkZWQiOnRydWUsInByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJ1c21hbjIyMjA5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6ImVmNjhmM2QxLWYyOWUtNDhmMC04MjQ2LWU5NzgzNzQxY2NjMCJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzg1MDcyOTIyfV0sInNlc3Npb25faWQiOiI1NzBjYTJkNy01NGVkLTQ0MDAtYWFmZS1iMTMxMjdjNWY5ZjkiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.4MhlGv7hlA7uPQG0nspxJTjBd5t8mmQkWOXNifAzkZ8",
+        "refresh_token": "fh4zlpiyjaa5",
+        "expires_at": 1785076521
+      },
+      "user": {
+        "id": "ef68f3d1-f29e-48f0-8246-e9783741ccc0",
+        "email": "usman22209@gmail.com",
+        "email_confirmed_at": "2026-07-26T12:40:11.39738Z",
         "is_onboarded": true
       }
     }
   },
   {
+    "id": "1.3",
+    "name": "Google Login Endpoint Check",
+    "endpoint": "POST /auth/google-login",
+    "status": 401,
+    "timeMs": 153,
+    "success": false,
+    "response": {
+      "message": "Google login failed: Google login failed: Bad ID token",
+      "error": "Unauthorized",
+      "statusCode": 401
+    }
+  },
+  {
+    "id": "1.4",
     "name": "Forgot Password",
     "endpoint": "POST /auth/forgot-password",
     "status": 201,
-    "timeMs": 2,
+    "timeMs": 7,
     "success": true,
-    "data": {
+    "response": {
       "success": true,
       "message": "If an account with this email exists, we have sent a password reset link. Please check your inbox."
     }
   },
   {
-    "name": "Google Login",
-    "endpoint": "POST /auth/google-login",
-    "status": "TIMEOUT",
-    "timeMs": 10000,
-    "success": false,
-    "data": "Request timed out"
-  },
-  {
-    "name": "Get Profile",
-    "endpoint": "GET /profile/me",
-    "status": 400,
-    "timeMs": 9168,
-    "success": false,
-    "data": {
-      "message": "Could not fetch profile: TypeError: fetch failed",
-      "error": "Bad Request",
-      "statusCode": 400
+    "id": "1.5",
+    "name": "Reset Password",
+    "endpoint": "PATCH /auth/reset-password",
+    "status": 200,
+    "timeMs": 479,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Password has been reset successfully.",
+      "user": {
+        "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "email": "netnetify@gmail.com"
+      }
     }
   },
   {
-    "name": "Update Profile",
+    "id": "1.7",
+    "name": "Refresh Token",
+    "endpoint": "POST /auth/refresh",
+    "status": 401,
+    "timeMs": 148,
+    "success": false,
+    "response": {
+      "message": "Invalid or expired refresh token: Invalid Refresh Token: Refresh Token Not Found",
+      "error": "Unauthorized",
+      "statusCode": 401
+    }
+  },
+  {
+    "id": "1.6",
+    "name": "Logout Account 1",
+    "endpoint": "POST /auth/logout",
+    "status": 201,
+    "timeMs": 445,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Logged out successfully. All sessions revoked."
+    }
+  },
+  {
+    "id": "1.2c",
+    "name": "Re-login Account 1",
+    "endpoint": "POST /auth/login",
+    "status": 201,
+    "timeMs": 236,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "You are logged in successfully.",
+      "session": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3l2d2NnbGp6Y25iZWt6amtnbWlhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlY2Y4YzhmMC1kZjc3LTQwZDUtYWZjNS1lMTNkZDVlNGU2ZGYiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg1MDc2NTIyLCJpYXQiOjE3ODUwNzI5MjMsImVtYWlsIjoibmV0bmV0aWZ5QGdtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJuZXRuZXRpZnlAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiZWNmOGM4ZjAtZGY3Ny00MGQ1LWFmYzUtZTEzZGQ1ZTRlNmRmIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3ODUwNzI5MjN9XSwic2Vzc2lvbl9pZCI6ImU0NzlhNDBjLTcyMmQtNGJkMi04NDI3LWZmNzg2ZmViYmZmMCIsImlzX2Fub255bW91cyI6ZmFsc2V9.gB32O6m187iwvcOH29YMKaD8nmQgKGv1u1WfjbFT8VU",
+        "refresh_token": "qv6wyutcenpv",
+        "expires_at": 1785076522
+      },
+      "user": {
+        "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "email": "netnetify@gmail.com",
+        "email_confirmed_at": "2026-07-26T13:35:21.661168Z",
+        "is_onboarded": false
+      }
+    }
+  },
+  {
+    "id": "2.1",
+    "name": "Get Profile Me (Account 1)",
+    "endpoint": "GET /profile/me",
+    "status": 404,
+    "timeMs": 514,
+    "success": false,
+    "response": {
+      "message": "Profile not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  },
+  {
+    "id": "2.2",
+    "name": "Update Profile Me (Account 1)",
+    "endpoint": "PUT /profile/me",
+    "status": 200,
+    "timeMs": 360,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Profile updated successfully.",
+      "data": {
+        "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "phone": "+923001234567",
+        "gender": "male",
+        "dob": "1995-06-15",
+        "blood_group": "O+",
+        "country": "Pakistan",
+        "state": "Punjab",
+        "city_id": "city_lahore",
+        "latitude": 31.5204,
+        "longitude": 74.3587,
+        "profile_image": "https://cdn.lifelink.org/avatars/user.jpg",
+        "is_onboarded": true,
+        "language_preference": "en",
+        "last_login_at": null,
+        "created_at": "2026-07-26T13:35:24.44861+00:00",
+        "updated_at": "2026-07-26T13:35:22.429+00:00",
+        "full_name": "Ali Khan",
+        "notifications_enabled": true,
+        "device_token": null,
+        "device_platform": null,
+        "email": "netnetify@gmail.com"
+      }
+    }
+  },
+  {
+    "id": "2.2b",
+    "name": "Update Profile Me (Account 2)",
     "endpoint": "PUT /profile/me",
     "status": 400,
-    "timeMs": 98,
+    "timeMs": 168,
     "success": false,
-    "data": {
-      "message": [
-        "property name should not exist",
-        "property bloodType should not exist",
-        "property address should not exist",
-        "property isAvailableForDonation should not exist",
-        "property fcmToken should not exist"
-      ],
+    "response": {
+      "message": "Could not update profile: new row violates row-level security policy for table \"profiles\"",
       "error": "Bad Request",
       "statusCode": 400
     }
   },
   {
+    "id": "2.4",
+    "name": "Update Profile Settings",
+    "endpoint": "PATCH /profile/settings",
+    "status": 200,
+    "timeMs": 173,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Settings updated.",
+      "data": {
+        "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "phone": "+923001234567",
+        "gender": "male",
+        "dob": "1995-06-15",
+        "blood_group": "O+",
+        "country": "Pakistan",
+        "state": "Punjab",
+        "city_id": "city_lahore",
+        "latitude": 31.5204,
+        "longitude": 74.3587,
+        "profile_image": "https://cdn.lifelink.org/avatars/user.jpg",
+        "is_onboarded": true,
+        "language_preference": "en",
+        "last_login_at": null,
+        "created_at": "2026-07-26T13:35:24.44861+00:00",
+        "updated_at": "2026-07-26T13:35:24.969529+00:00",
+        "full_name": "Ali Khan",
+        "notifications_enabled": true,
+        "device_token": null,
+        "device_platform": null
+      }
+    }
+  },
+  {
+    "id": "3.1",
     "name": "Create Blood Request",
     "endpoint": "POST /blood-requests",
+    "status": 201,
+    "timeMs": 1546,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Blood request created successfully.",
+      "data": {
+        "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+        "requester_id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "patient_name": "Ahmed Khan",
+        "blood_group": "B+",
+        "units_required": 3,
+        "fulfilled_units": 0,
+        "hospital_name": "Mayo Hospital",
+        "hospital_address": "Hospital Road, Anarkali",
+        "city_id": "city_lahore",
+        "latitude": 31.5723,
+        "longitude": 74.3213,
+        "urgency": "critical",
+        "contact_number": "+923001234567",
+        "description": "Patient needs urgent B+ blood for surgery.",
+        "status": "open",
+        "is_verified": false,
+        "required_date": "2026-07-27T10:00:00+00:00",
+        "created_at": "2026-07-26T13:35:26.49643+00:00",
+        "updated_at": "2026-07-26T13:35:26.49643+00:00"
+      }
+    }
+  },
+  {
+    "id": "3.2",
+    "name": "Get Feed",
+    "endpoint": "GET /blood-requests/feed?page=1&limit=10&blood_group=B+&urgency=critical",
+    "status": 200,
+    "timeMs": 408,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Feed fetched successfully.",
+      "data": {
+        "requests": [],
+        "pagination": {
+          "page": 1,
+          "limit": 10,
+          "total": 0,
+          "totalPages": 0,
+          "hasNext": false,
+          "hasPrev": false
+        }
+      }
+    }
+  },
+  {
+    "id": "3.3",
+    "name": "Get Urgent Requests",
+    "endpoint": "GET /blood-requests/urgent?limit=5&lat=31.5204&lng=74.3587",
+    "status": 200,
+    "timeMs": 342,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+          "bloodType": "B+",
+          "patientName": "Ahmed Khan",
+          "hospital": "Mayo Hospital",
+          "city": "city_lahore",
+          "state": "Punjab",
+          "patientImage": "https://cdn.lifelink.org/avatars/user.jpg",
+          "units": 3,
+          "urgency": "critical",
+          "time": "Just now",
+          "distance": "6.8 km",
+          "latitude": 31.5723,
+          "longitude": 74.3213
+        }
+      ]
+    }
+  },
+  {
+    "id": "3.4",
+    "name": "Get My Requests",
+    "endpoint": "GET /blood-requests/my?page=1&limit=10",
+    "status": 200,
+    "timeMs": 325,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "requests": [
+          {
+            "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+            "requester_id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+            "patient_name": "Ahmed Khan",
+            "blood_group": "B+",
+            "units_required": 3,
+            "fulfilled_units": 0,
+            "hospital_name": "Mayo Hospital",
+            "hospital_address": "Hospital Road, Anarkali",
+            "city_id": "city_lahore",
+            "latitude": 31.5723,
+            "longitude": 74.3213,
+            "urgency": "critical",
+            "contact_number": "+923001234567",
+            "description": "Patient needs urgent B+ blood for surgery.",
+            "status": "open",
+            "is_verified": false,
+            "required_date": "2026-07-27T10:00:00+00:00",
+            "created_at": "2026-07-26T13:35:26.49643+00:00",
+            "updated_at": "2026-07-26T13:35:26.49643+00:00"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 10,
+          "total": 1,
+          "totalPages": 1,
+          "hasNext": false,
+          "hasPrev": false
+        }
+      }
+    }
+  },
+  {
+    "id": "3.5",
+    "name": "Get Request Details",
+    "endpoint": "GET /blood-requests/2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+    "status": 200,
+    "timeMs": 249,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+        "requester_id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+        "patient_name": "Ahmed Khan",
+        "blood_group": "B+",
+        "units_required": 3,
+        "fulfilled_units": 0,
+        "hospital_name": "Mayo Hospital",
+        "hospital_address": "Hospital Road, Anarkali",
+        "city_id": "city_lahore",
+        "latitude": 31.5723,
+        "longitude": 74.3213,
+        "urgency": "critical",
+        "contact_number": "+923001234567",
+        "description": "Patient needs urgent B+ blood for surgery.",
+        "status": "open",
+        "is_verified": false,
+        "required_date": "2026-07-27T10:00:00+00:00",
+        "created_at": "2026-07-26T13:35:26.49643+00:00",
+        "updated_at": "2026-07-26T13:35:26.49643+00:00",
+        "requester": {
+          "id": "ecf8c8f0-df77-40d5-afc5-e13dd5e4e6df",
+          "phone": "+923001234567",
+          "city_id": "city_lahore",
+          "blood_group": "O+",
+          "profile_image": "https://cdn.lifelink.org/avatars/user.jpg"
+        }
+      }
+    }
+  },
+  {
+    "id": "3.6",
+    "name": "Update Request Status",
+    "endpoint": "PATCH /blood-requests/2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
     "status": 400,
-    "timeMs": 19,
+    "timeMs": 7,
     "success": false,
-    "data": {
+    "response": {
       "message": [
-        "property bloodType should not exist",
-        "property hospitalName should not exist",
-        "property patientName should not exist",
-        "property unitsRequired should not exist",
-        "property address should not exist",
-        "property notes should not exist",
-        "blood_group must be a string",
-        "units_required must not be less than 1",
-        "units_required must be an integer number",
-        "hospital_name must be a string",
-        "urgency must be one of the following values: critical, high, normal"
+        "property fulfilled_units should not exist"
       ],
       "error": "Bad Request",
       "statusCode": 400
     }
   },
   {
-    "name": "Get Feed",
-    "endpoint": "GET /blood-requests/feed?page=1&limit=10",
-    "status": "TIMEOUT",
-    "timeMs": 10000,
-    "success": false,
-    "data": "Request timed out"
+    "id": "4.1",
+    "name": "Accept Request (Donate Now)",
+    "endpoint": "POST /donations/accept",
+    "status": 201,
+    "timeMs": 1714,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Donation intent registered.",
+      "data": {
+        "id": "6296f99d-b3e5-4faa-9e92-e62c4f8eff04",
+        "request_id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+        "donor_id": "ef68f3d1-f29e-48f0-8246-e9783741ccc0",
+        "status": "intent",
+        "created_at": "2026-07-26T13:35:28.339576+00:00",
+        "updated_at": "2026-07-26T13:35:28.339576+00:00"
+      }
+    }
   },
   {
-    "name": "Get My Requests",
-    "endpoint": "GET /blood-requests/my",
-    "status": "TIMEOUT",
-    "timeMs": 10000,
-    "success": false,
-    "data": "Request timed out"
+    "id": "4.2",
+    "name": "Get My Donations Log",
+    "endpoint": "GET /donations/my",
+    "status": 200,
+    "timeMs": 166,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "stats": {
+          "totalDonations": 0,
+          "totalUnits": 0,
+          "livesSaved": 0,
+          "isEligible": true,
+          "lastDonationDate": null,
+          "nextEligibleDateStr": null
+        },
+        "history": [
+          {
+            "id": "6296f99d-b3e5-4faa-9e92-e62c4f8eff04",
+            "hospitalName": "Mayo Hospital",
+            "date": "2026-07-26",
+            "units": 1,
+            "bloodType": "B+",
+            "status": "intent",
+            "request": {
+              "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+              "patientName": "Ahmed Khan",
+              "hospital": "Mayo Hospital",
+              "city": "city_lahore",
+              "bloodType": "B+",
+              "units": 3,
+              "urgency": "critical"
+            }
+          }
+        ]
+      }
+    }
   },
   {
-    "name": "Upload File",
+    "id": "4.3",
+    "name": "Get Donations for Request",
+    "endpoint": "GET /donations/request/2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+    "status": 200,
+    "timeMs": 319,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "request_id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+        "donations": [
+          {
+            "id": "6296f99d-b3e5-4faa-9e92-e62c4f8eff04",
+            "request_id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+            "donor_id": "ef68f3d1-f29e-48f0-8246-e9783741ccc0",
+            "status": "intent",
+            "created_at": "2026-07-26T13:35:28.339576+00:00",
+            "updated_at": "2026-07-26T13:35:28.339576+00:00",
+            "donor": null
+          }
+        ],
+        "stats": {
+          "total": 1,
+          "intent": 1,
+          "completed": 0,
+          "cancelled": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "4.4",
+    "name": "Update Donation Status",
+    "endpoint": "PATCH /donations/6296f99d-b3e5-4faa-9e92-e62c4f8eff04/status",
+    "status": 200,
+    "timeMs": 429,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Donation status updated.",
+      "data": {
+        "id": "6296f99d-b3e5-4faa-9e92-e62c4f8eff04",
+        "request_id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+        "donor_id": "ef68f3d1-f29e-48f0-8246-e9783741ccc0",
+        "status": "completed",
+        "created_at": "2026-07-26T13:35:28.339576+00:00",
+        "updated_at": "2026-07-26T13:35:30.486562+00:00"
+      }
+    }
+  },
+  {
+    "id": "4.2b",
+    "name": "Get My Donations Log (Post Complete)",
+    "endpoint": "GET /donations/my",
+    "status": 200,
+    "timeMs": 158,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "stats": {
+          "totalDonations": 1,
+          "totalUnits": 1,
+          "livesSaved": 3,
+          "isEligible": false,
+          "lastDonationDate": "2026-07-26",
+          "nextEligibleDateStr": "Oct 24, 2026"
+        },
+        "history": [
+          {
+            "id": "6296f99d-b3e5-4faa-9e92-e62c4f8eff04",
+            "hospitalName": "Mayo Hospital",
+            "date": "2026-07-26",
+            "units": 1,
+            "bloodType": "B+",
+            "status": "completed",
+            "request": {
+              "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+              "patientName": "Ahmed Khan",
+              "hospital": "Mayo Hospital",
+              "city": "city_lahore",
+              "bloodType": "B+",
+              "units": 3,
+              "urgency": "critical"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "5.3",
+    "name": "Send Chat Message",
+    "endpoint": "POST /chat/messages",
+    "status": 400,
+    "timeMs": 941,
+    "success": false,
+    "response": {
+      "message": "Could not send message: new row violates row-level security policy for table \"chat_messages\"",
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  },
+  {
+    "id": "5.1",
+    "name": "Get Chat Threads",
+    "endpoint": "GET /chat/threads",
+    "status": 200,
+    "timeMs": 748,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "id": "e2df3444-3162-42a9-b9d4-d74513066378",
+          "request_id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+          "participant": {
+            "id": "usr_unknown",
+            "name": "User",
+            "avatar": "https://cdn.lifelink.org/avatars/user.jpg",
+            "is_online": true
+          },
+          "request": {
+            "id": "2ba8cd87-df3c-44ea-8c4e-650fffff0bad",
+            "bloodType": "B+",
+            "patientName": "Ahmed Khan",
+            "hospital": "Mayo Hospital",
+            "city": "city_lahore",
+            "units": 3,
+            "urgency": "critical",
+            "time": "Just now",
+            "distance": "2.5 km"
+          },
+          "lastMessage": "I will arrive at Mayo Hospital in 15 minutes!",
+          "time": "Just now",
+          "unreadCount": 0,
+          "isOnline": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "5.2",
+    "name": "Get Thread Messages",
+    "endpoint": "GET /chat/threads/e2df3444-3162-42a9-b9d4-d74513066378/messages?page=1&limit=20",
+    "status": 200,
+    "timeMs": 1446,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "thread_id": "e2df3444-3162-42a9-b9d4-d74513066378",
+        "messages": [],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "6.1",
+    "name": "Get Notifications",
+    "endpoint": "GET /notifications",
+    "status": 200,
+    "timeMs": 470,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": []
+    }
+  },
+  {
+    "id": "6.2",
+    "name": "Get Notifications Unread Count",
+    "endpoint": "GET /notifications/unread-count",
+    "status": 200,
+    "timeMs": 1022,
+    "success": true,
+    "response": {
+      "success": true,
+      "data": {
+        "unreadCount": 0
+      }
+    }
+  },
+  {
+    "id": "6.4",
+    "name": "Mark All Notifications Read",
+    "endpoint": "POST /notifications/read-all",
+    "status": 201,
+    "timeMs": 1175,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "All notifications marked as read."
+    }
+  },
+  {
+    "id": "6.5",
+    "name": "Register Device Push Token",
+    "endpoint": "POST /notifications/device-token",
+    "status": 201,
+    "timeMs": 187,
+    "success": true,
+    "response": {
+      "success": true,
+      "message": "Device push token registered successfully."
+    }
+  },
+  {
+    "id": "7.1",
+    "name": "File Upload Endpoint Check",
     "endpoint": "POST /file/upload",
     "status": 201,
-    "timeMs": 10,
+    "timeMs": 46,
     "success": true,
-    "data": {
+    "response": {
       "success": false,
       "message": "Cannot read properties of undefined (reading 'buffer')"
     }
   },
   {
-    "name": "Delete File",
+    "id": "7.2",
+    "name": "File Delete Endpoint Check",
     "endpoint": "POST /file/delete",
     "status": 201,
-    "timeMs": 5,
+    "timeMs": 8,
     "success": true,
-    "data": {
+    "response": {
       "success": true,
       "message": "File deletion initiated"
     }
   },
   {
-    "name": "Refresh Token",
-    "endpoint": "POST /auth/refresh",
-    "status": 201,
-    "timeMs": 3445,
-    "success": true,
-    "data": {
-      "success": true,
-      "message": "Token refreshed successfully.",
-      "session": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImRiK2RXMUJQNVZ6WU9DNkoiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3l2d2NnbGp6Y25iZWt6amtnbWlhLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3NDlhMDA5Zi03ZGZhLTQwYTAtYWQxMC0wMDRmZmNiNjIwNzkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3NzM2NzQwLCJpYXQiOjE3Nzc3MzMxNDEsImVtYWlsIjoibmV0bmV0bGlmeUBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJpc19vbmJvYXJkZWQiOnRydWUsInByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWwiOiJuZXRuZXRsaWZ5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6Ijc0OWEwMDlmLTdkZmEtNDBhMC1hZDEwLTAwNGZmY2I2MjA3OSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzc3NzMzMDk3fV0sInNlc3Npb25faWQiOiI3MjJlNTJlZC05YWZmLTQxMjYtYjIwNi1mODFlOTQ5NjA0NTEiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.KI5xT-8E1ky8Ug7ksitX9myJ2sF7SUj8NXHxiD-WbSU",
-        "refresh_token": "bfgssmc3zzdv",
-        "expires_at": 1777736740
-      },
-      "user": {
-        "id": "749a009f-7dfa-40a0-ad10-004ffcb62079",
-        "email": "netnetlify@gmail.com",
-        "email_confirmed_at": "2026-02-01T11:42:24.091061Z",
-        "is_onboarded": true
-      }
-    }
-  },
-  {
-    "name": "Reset Password",
-    "endpoint": "PATCH /auth/reset-password",
+    "id": "8.1",
+    "name": "Get FAQs List",
+    "endpoint": "GET /support/faqs",
     "status": 200,
-    "timeMs": 1628,
+    "timeMs": 158,
     "success": true,
-    "data": {
+    "response": {
       "success": true,
-      "message": "Password has been reset successfully.",
-      "user": {
-        "id": "749a009f-7dfa-40a0-ad10-004ffcb62079",
-        "email": "netnetlify@gmail.com"
-      }
+      "data": [
+        {
+          "id": "faq_1",
+          "question": "Who can donate blood?",
+          "answer": "Anyone aged 18-65, weighing over 50kg, and in good general health with no active infections can donate."
+        },
+        {
+          "id": "faq_2",
+          "question": "How often can I donate?",
+          "answer": "You can safely donate whole blood once every 90 days (3 months) to allow your body to fully replenish iron levels."
+        },
+        {
+          "id": "faq_3",
+          "question": "Is donating blood safe?",
+          "answer": "Yes, donating blood is completely safe. Sterile, disposable single-use needles and equipment are used for every donation."
+        },
+        {
+          "id": "faq_4",
+          "question": "How long does a blood request stay active?",
+          "answer": "Blood requests stay open until fulfilled by donors or manually marked as completed by the requester."
+        }
+      ]
     }
   },
   {
-    "name": "Logout",
-    "endpoint": "POST /auth/logout",
+    "id": "8.2",
+    "name": "Submit Support Contact Ticket",
+    "endpoint": "POST /support/contact",
     "status": 201,
-    "timeMs": 1219,
+    "timeMs": 157,
     "success": true,
-    "data": {
+    "response": {
       "success": true,
-      "message": "Logged out successfully. All sessions revoked."
+      "message": "Support query submitted successfully. Ticket ID #SUP-4581."
     }
   }
 ]

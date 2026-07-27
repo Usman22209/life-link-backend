@@ -66,4 +66,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   language_preference?: string;
+
+  @ApiPropertyOptional({ description: 'Notifications enabled toggle' })
+  @IsOptional()
+  @IsBoolean()
+  notifications_enabled?: boolean;
 }

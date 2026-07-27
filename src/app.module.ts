@@ -11,6 +11,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BloodRequestModule } from './blood-request/blood-request.module';
 import { DonationModule } from './donation/donation.module';
+import { ChatModule } from './chat/chat.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -20,7 +22,9 @@ import { DonationModule } from './donation/donation.module';
         limit: 100,
       },
     ]),
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     SupabaseModule,
     AuthModule,
     FileModule,
@@ -28,6 +32,8 @@ import { DonationModule } from './donation/donation.module';
     NotificationModule,
     BloodRequestModule,
     DonationModule,
+    ChatModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [
@@ -39,4 +45,3 @@ import { DonationModule } from './donation/donation.module';
   ],
 })
 export class AppModule { }
-
