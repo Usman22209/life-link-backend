@@ -53,6 +53,16 @@ export class PaginationDto {
     @IsEnum(['asc', 'desc'])
     sort_order?: 'asc' | 'desc' = 'desc';
 
+    @ApiPropertyOptional({ description: 'User latitude for distance calculation & nearest sorting' })
+    @IsOptional()
+    @Type(() => Number)
+    lat?: number;
+
+    @ApiPropertyOptional({ description: 'User longitude for distance calculation & nearest sorting' })
+    @IsOptional()
+    @Type(() => Number)
+    lng?: number;
+
     get skip(): number {
         return ((this.page ?? 1) - 1) * (this.limit ?? 10);
     }

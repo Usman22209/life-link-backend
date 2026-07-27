@@ -112,32 +112,73 @@ export class BloodRequestService {
         const skip = pagination.skip ?? (page - 1) * limit;
 
         const rawSort = pagination.sort_by?.toLowerCase() || 'created_at';
-        const sortColumn =
-            rawSort === 'most_units'
-                ? 'units_required'
-                : rawSort === 'urgency'
-                ? 'urgency'
-                : 'created_at';
+        const isNearestSort = rawSort === 'nearest';
 
-        const isAscending = pagination.sort_order === 'asc';
-
-        const { data, error } = await dataQuery
-            .order(sortColumn, { ascending: isAscending })
-            .range(skip, skip + limit - 1);
-
-        if (error) {
-            this.logger.error(`Error fetching blood request feed`, error.message);
-            throw new BadRequestException(`Could not fetch feed: ${error.message}`);
-        }
-
+        let requestsList: any[] = [];
         const total = count ?? 0;
         const totalPages = Math.ceil(total / limit);
+
+        if (isNearestSort) {
+            // When sorting by 'nearest', fetch matching filtered dataset, compute distance for ALL records,
+            // sort by distance ASC, and THEN apply pagination slicing so nearest items on Page 2 move to Page 1!
+            const { data, error } = await dataQuery.order('created_at', { ascending: false });
+
+            if (error) {
+                this.logger.error(`Error fetching blood request feed for nearest sorting`, error.message);
+                throw new BadRequestException(`Could not fetch feed: ${error.message}`);
+            }
+
+            const mapped = (data || []).map((req: any) => {
+                const distanceStr = calculateDistance(pagination.lat, pagination.lng, req.latitude, req.longitude);
+                const distNum = parseFloat(distanceStr) || 999999;
+                return {
+                    ...req,
+                    distance: distanceStr,
+                    distance_km: distNum,
+                };
+            });
+
+            // Sort entire matching set by distance ascending
+            mapped.sort((a: any, b: any) => a.distance_km - b.distance_km);
+
+            // Slice for current page
+            requestsList = mapped.slice(skip, skip + limit);
+        } else {
+            // Standard column sorting (created_at, units_required, urgency) via SQL range
+            const sortColumn =
+                rawSort === 'most_units'
+                    ? 'units_required'
+                    : rawSort === 'urgency'
+                    ? 'urgency'
+                    : 'created_at';
+
+            const isAscending = pagination.sort_order === 'asc';
+
+            const { data, error } = await dataQuery
+                .order(sortColumn, { ascending: isAscending })
+                .range(skip, skip + limit - 1);
+
+            if (error) {
+                this.logger.error(`Error fetching blood request feed`, error.message);
+                throw new BadRequestException(`Could not fetch feed: ${error.message}`);
+            }
+
+            requestsList = (data || []).map((req: any) => {
+                const distanceStr = calculateDistance(pagination.lat, pagination.lng, req.latitude, req.longitude);
+                const distNum = parseFloat(distanceStr) || 999999;
+                return {
+                    ...req,
+                    distance: distanceStr,
+                    distance_km: distNum,
+                };
+            });
+        }
 
         return {
             success: true,
             message: 'Feed fetched successfully.',
             data: {
-                requests: data || [],
+                requests: requestsList,
                 pagination: {
                     page,
                     limit,

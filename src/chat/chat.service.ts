@@ -92,6 +92,24 @@ export class ChatService {
     }
 
     async getMessages(userId: string, threadId: string, page: number = 1, limit: number = 20) {
+        // Verify thread exists
+        const { data: thread } = await this.supabase.client
+            .from('chat_threads')
+            .select('id')
+            .eq('id', threadId)
+            .maybeSingle();
+
+        if (!thread) {
+            return {
+                success: true,
+                data: {
+                    thread_id: threadId,
+                    messages: [],
+                    pagination: { page, limit, total: 0 },
+                },
+            };
+        }
+
         // Mark unread messages as read
         await this.supabase.client
             .from('chat_messages')
@@ -137,7 +155,21 @@ export class ChatService {
     async sendMessage(userId: string, dto: CreateMessageDto) {
         let threadId = dto.thread_id;
 
-        // If thread_id is missing but request_id is provided, find or create thread
+        // Verify if provided thread_id actually exists in database
+        if (threadId) {
+            const { data: existing } = await this.supabase.client
+                .from('chat_threads')
+                .select('id')
+                .eq('id', threadId)
+                .maybeSingle();
+
+            if (!existing) {
+                this.logger.warn(`Thread ID ${threadId} does not exist in chat_threads table.`);
+                threadId = undefined; // Reset threadId so we can attempt auto-creation if request_id is present
+            }
+        }
+
+        // If thread_id is missing/invalid but request_id is provided, find or create thread
         if (!threadId && dto.request_id) {
             const { data: request } = await this.supabase.client
                 .from('blood_requests')
@@ -183,7 +215,7 @@ export class ChatService {
         }
 
         if (!threadId) {
-            throw new BadRequestException('Either thread_id or request_id must be provided');
+            throw new NotFoundException('Chat thread not found. Please provide a valid request_id to start a thread.');
         }
 
         // Insert message
