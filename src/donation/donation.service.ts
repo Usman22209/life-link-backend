@@ -33,6 +33,23 @@ export class DonationService {
             throw new BadRequestException('You cannot accept your own blood request');
         }
 
+        // Check donor eligibility (90-day cooldown)
+        const { data: donorProfile } = await this.supabase.client
+            .from('profiles')
+            .select('last_donated_at')
+            .eq('id', donorId)
+            .maybeSingle();
+
+        if (donorProfile?.last_donated_at) {
+            const lastDate = new Date(donorProfile.last_donated_at);
+            const nextEligible = new Date(lastDate);
+            nextEligible.setDate(nextEligible.getDate() + 90);
+            if (new Date() < nextEligible) {
+                const formattedDate = nextEligible.toISOString().split('T')[0];
+                throw new BadRequestException(`You cannot donate blood yet. Your 90-day cooldown period ends on ${formattedDate}.`);
+            }
+        }
+
         // 3. Create donation record
         const { data: donation, error: donationError } = await this.supabase.client
             .from('donations')
@@ -236,8 +253,31 @@ export class DonationService {
             .select()
             .single();
 
-        if (error) {
-            throw new BadRequestException(`Could not update donation: ${error.message}`);
+        if (status === DonationStatus.COMPLETED) {
+            // 1. Update donor's last_donated_at date in profiles table
+            await this.supabase.client
+                .from('profiles')
+                .update({ last_donated_at: new Date().toISOString().split('T')[0] })
+                .eq('id', donation.donor_id);
+
+            // 2. Increment fulfilled_units on blood_requests
+            const { data: bReq } = await this.supabase.client
+                .from('blood_requests')
+                .select('units_required, fulfilled_units')
+                .eq('id', donation.request_id)
+                .single();
+
+            if (bReq) {
+                const newFulfilled = (bReq.fulfilled_units || 0) + 1;
+                const newReqStatus = newFulfilled >= bReq.units_required ? 'fulfilled' : 'partially_fulfilled';
+                await this.supabase.client
+                    .from('blood_requests')
+                    .update({
+                        fulfilled_units: newFulfilled,
+                        status: newReqStatus,
+                    })
+                    .eq('id', donation.request_id);
+            }
         }
 
         return {

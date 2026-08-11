@@ -71,4 +71,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   notifications_enabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Last blood donation date', example: '2026-04-01' })
+  @IsOptional()
+  @IsDateString()
+  last_donated_at?: string;
 }

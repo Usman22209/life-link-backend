@@ -1,5 +1,5 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SignupDto {
   @ApiProperty({ description: 'User email address' })
@@ -10,4 +10,9 @@ export class SignupDto {
   @IsString()
   @MinLength(6)
   password: string;
+
+  @ApiPropertyOptional({ description: 'Device platform for analytics (android, ios)' })
+  @IsOptional()
+  @IsString()
+  device_platform?: string;
 }

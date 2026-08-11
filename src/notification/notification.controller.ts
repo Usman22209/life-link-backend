@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationService } from './notification.service';
-import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
 import { AuthGuard } from '../auth/auth.guard';
 
 @ApiTags('Notifications & Alerts')
@@ -37,12 +36,5 @@ export class NotificationController {
     @ApiResponse({ status: 200, description: 'All notifications marked as read.' })
     markAllAsRead(@Req() req: any) {
         return this.notificationService.markAllAsRead(req.user.id);
-    }
-
-    @Post('device-token')
-    @ApiOperation({ summary: 'Register FCM / APNS device push token' })
-    @ApiResponse({ status: 200, description: 'Device push token registered successfully.' })
-    registerDeviceToken(@Req() req: any, @Body() dto: RegisterDeviceTokenDto) {
-        return this.notificationService.registerDeviceToken(req.user.id, dto);
     }
 }

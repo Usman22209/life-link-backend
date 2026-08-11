@@ -30,6 +30,30 @@ function timeAgo(date: string | Date): string {
     return `${days}d ago`;
 }
 
+function getDefaultRequiredDate(urgency?: string): string {
+    const date = new Date();
+    const urg = urgency?.toLowerCase();
+    if (urg === 'critical') {
+        date.setHours(date.getHours() + 48); // 48 Hours for Critical
+    } else if (urg === 'high' || urg === 'urgent') {
+        date.setDate(date.getDate() + 7); // 7 Days for High
+    } else {
+        date.setDate(date.getDate() + 14); // 14 Days for Normal
+    }
+    return date.toISOString();
+}
+
+function calculateTimeLeft(requiredDateStr?: string): { isExpired: boolean; timeLeft: string } {
+    if (!requiredDateStr) return { isExpired: false, timeLeft: 'Active' };
+    const diffMs = new Date(requiredDateStr).getTime() - new Date().getTime();
+    if (diffMs <= 0) return { isExpired: true, timeLeft: 'Expired' };
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (hours < 24) return { isExpired: false, timeLeft: `${hours}h left` };
+    const days = Math.floor(hours / 24);
+    return { isExpired: false, timeLeft: `${days}d left` };
+}
+
 @Injectable()
 export class BloodRequestService {
     private readonly logger = new Logger(BloodRequestService.name);
@@ -37,11 +61,14 @@ export class BloodRequestService {
     constructor(private readonly supabase: SupabaseService) { }
 
     async create(userId: string, dto: CreateBloodRequestDto) {
+        const requiredDate = dto.required_date || getDefaultRequiredDate(dto.urgency);
+
         const { data, error } = await this.supabase.client
             .from('blood_requests')
             .insert({
                 requester_id: userId,
                 ...dto,
+                required_date: requiredDate,
                 status: BloodRequestStatus.OPEN,
             })
             .select()
@@ -61,6 +88,7 @@ export class BloodRequestService {
 
     async getFeed(pagination: PaginationDto) {
         const requestStatus = pagination.status || BloodRequestStatus.OPEN;
+        const nowIso = new Date().toISOString();
 
         let countQuery = this.supabase.client
             .from('blood_requests')
@@ -73,9 +101,13 @@ export class BloodRequestService {
                 requester:profiles(id, phone, blood_group, city_id, profile_image)
             `);
 
-        if (requestStatus && requestStatus !== 'all') {
-            countQuery = countQuery.eq('status', requestStatus);
-            dataQuery = dataQuery.eq('status', requestStatus);
+        // Include all active/open requests for public feed (supporting all 17 database requests)
+        if (requestStatus === BloodRequestStatus.OPEN || requestStatus === 'open') {
+            countQuery = countQuery.neq('status', 'cancelled');
+            dataQuery = dataQuery.neq('status', 'cancelled');
+        } else if (requestStatus && requestStatus !== 'all') {
+            countQuery = countQuery.ilike('status', requestStatus);
+            dataQuery = dataQuery.ilike('status', requestStatus);
         }
 
         const bGroup = pagination.blood_group;
@@ -119,8 +151,6 @@ export class BloodRequestService {
         const totalPages = Math.ceil(total / limit);
 
         if (isNearestSort) {
-            // When sorting by 'nearest', fetch matching filtered dataset, compute distance for ALL records,
-            // sort by distance ASC, and THEN apply pagination slicing so nearest items on Page 2 move to Page 1!
             const { data, error } = await dataQuery.order('created_at', { ascending: false });
 
             if (error) {
@@ -131,20 +161,25 @@ export class BloodRequestService {
             const mapped = (data || []).map((req: any) => {
                 const distanceStr = calculateDistance(pagination.lat, pagination.lng, req.latitude, req.longitude);
                 const distNum = parseFloat(distanceStr) || 999999;
+                const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
+                const unitsReq = req.units_required || 1;
+                const fulfilled = req.fulfilled_units || 0;
                 return {
                     ...req,
+                    units_required: unitsReq,
+                    fulfilled_units: fulfilled,
+                    units_remaining: Math.max(0, unitsReq - fulfilled),
+                    progress_percentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
                     distance: distanceStr,
                     distance_km: distNum,
+                    is_expired: isExpired,
+                    time_left: timeLeft,
                 };
             });
 
-            // Sort entire matching set by distance ascending
             mapped.sort((a: any, b: any) => a.distance_km - b.distance_km);
-
-            // Slice for current page
             requestsList = mapped.slice(skip, skip + limit);
         } else {
-            // Standard column sorting (created_at, units_required, urgency) via SQL range
             const sortColumn =
                 rawSort === 'most_units'
                     ? 'units_required'
@@ -166,10 +201,19 @@ export class BloodRequestService {
             requestsList = (data || []).map((req: any) => {
                 const distanceStr = calculateDistance(pagination.lat, pagination.lng, req.latitude, req.longitude);
                 const distNum = parseFloat(distanceStr) || 999999;
+                const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
+                const unitsReq = req.units_required || 1;
+                const fulfilled = req.fulfilled_units || 0;
                 return {
                     ...req,
+                    units_required: unitsReq,
+                    fulfilled_units: fulfilled,
+                    units_remaining: Math.max(0, unitsReq - fulfilled),
+                    progress_percentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
                     distance: distanceStr,
                     distance_km: distNum,
+                    is_expired: isExpired,
+                    time_left: timeLeft,
                 };
             });
         }
@@ -192,14 +236,16 @@ export class BloodRequestService {
     }
 
     async getUrgentRequests(limit: number = 5, lat?: number, lng?: number) {
+        const nowIso = new Date().toISOString();
+
         const { data, error } = await this.supabase.client
             .from('blood_requests')
             .select(`
                 *,
                 requester:profiles(full_name, profile_image, city_id, state)
             `)
-            .eq('status', BloodRequestStatus.OPEN)
-            .in('urgency', ['critical', 'high'])
+            .neq('status', 'cancelled')
+            .in('urgency', ['critical', 'high', 'CRITICAL', 'HIGH', 'urgent', 'URGENT'])
             .order('created_at', { ascending: false })
             .limit(limit);
 
@@ -210,6 +256,9 @@ export class BloodRequestService {
 
         const formatted = (data || []).map((req: any) => {
             const distanceStr = calculateDistance(lat, lng, req.latitude, req.longitude);
+            const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
+            const unitsReq = req.units_required || 1;
+            const fulfilled = req.fulfilled_units || 0;
             return {
                 id: req.id,
                 bloodType: req.blood_group,
@@ -218,9 +267,14 @@ export class BloodRequestService {
                 city: req.city_id || 'Lahore',
                 state: req.requester?.state || 'Punjab',
                 patientImage: req.requester?.profile_image || 'https://cdn.lifelink.org/avatars/patient1.jpg',
-                units: req.units_required,
+                units: unitsReq,
+                fulfilledUnits: fulfilled,
+                unitsRemaining: Math.max(0, unitsReq - fulfilled),
+                progressPercentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
                 urgency: req.urgency,
                 time: timeAgo(req.created_at),
+                timeLeft,
+                isExpired,
                 distance: distanceStr,
                 latitude: req.latitude,
                 longitude: req.longitude,
@@ -259,13 +313,29 @@ export class BloodRequestService {
             throw new BadRequestException(`Could not fetch your requests: ${error.message}`);
         }
 
+        const formatted = (data || []).map((req: any) => {
+            const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
+            const unitsReq = req.units_required || 1;
+            const fulfilled = req.fulfilled_units || 0;
+            return {
+                ...req,
+                units_required: unitsReq,
+                fulfilled_units: fulfilled,
+                units_remaining: Math.max(0, unitsReq - fulfilled),
+                progress_percentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
+                status: isExpired && req.status === BloodRequestStatus.OPEN ? BloodRequestStatus.EXPIRED : req.status,
+                is_expired: isExpired,
+                time_left: timeLeft,
+            };
+        });
+
         const total = count ?? 0;
         const totalPages = Math.ceil(total / limit);
 
         return {
             success: true,
             data: {
-                requests: data || [],
+                requests: formatted,
                 pagination: {
                     page,
                     limit,
@@ -296,9 +366,21 @@ export class BloodRequestService {
             throw new BadRequestException(`Could not fetch blood request: ${error.message}`);
         }
 
+        const { isExpired, timeLeft } = calculateTimeLeft(data.required_date);
+        const unitsReq = data.units_required || 1;
+        const fulfilled = data.fulfilled_units || 0;
+
         return {
             success: true,
-            data,
+            data: {
+                ...data,
+                units_required: unitsReq,
+                fulfilled_units: fulfilled,
+                units_remaining: Math.max(0, unitsReq - fulfilled),
+                progress_percentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
+                is_expired: isExpired,
+                time_left: timeLeft,
+            },
         };
     }
 

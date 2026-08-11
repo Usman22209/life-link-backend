@@ -71,19 +71,23 @@ export class ProfileService {
         const donationsCount = donations?.length || 0;
         const livesSaved = donationsCount * 3;
 
-        let lastDonatedAt: string | null = null;
+        let lastDonatedAt: string | null = profileData?.last_donated_at || null;
         let isEligible = true;
         let nextEligibleDate: string | null = null;
 
         if (donations && donations.length > 0) {
             const lastDonation = donations[0];
-            const lastDate = new Date(lastDonation.updated_at || lastDonation.created_at);
-            lastDonatedAt = lastDate.toISOString().split('T')[0];
+            const lastDateStr = lastDonation.updated_at || lastDonation.created_at;
+            if (!lastDonatedAt || new Date(lastDateStr) > new Date(lastDonatedAt)) {
+                lastDonatedAt = new Date(lastDateStr).toISOString().split('T')[0];
+            }
+        }
 
+        if (lastDonatedAt) {
+            const lastDate = new Date(lastDonatedAt);
             const nextEligible = new Date(lastDate);
             nextEligible.setDate(nextEligible.getDate() + 90);
             nextEligibleDate = nextEligible.toISOString().split('T')[0];
-
             isEligible = new Date() >= nextEligible;
         }
 

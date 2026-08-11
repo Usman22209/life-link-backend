@@ -1,7 +1,6 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
 
 function timeAgo(date: string | Date): string {
     if (!date) return 'Just now';
@@ -162,27 +161,6 @@ export class NotificationService {
         return {
             success: true,
             message: 'All notifications marked as read.',
-        };
-    }
-
-    async registerDeviceToken(userId: string, dto: RegisterDeviceTokenDto) {
-        const { error } = await this.supabase.client
-            .from('profiles')
-            .update({
-                device_token: dto.device_token,
-                device_platform: dto.platform || 'android',
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-
-        if (error) {
-            this.logger.error(`Error registering device token for user ${userId}`, error.message);
-            throw new BadRequestException(`Could not register device token: ${error.message}`);
-        }
-
-        return {
-            success: true,
-            message: 'Device push token registered successfully.',
         };
     }
 }

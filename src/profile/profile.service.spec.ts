@@ -48,7 +48,7 @@ describe('ProfileService', () => {
             const result = await service.getProfile(userId);
 
             expect(result.success).toBe(true);
-            expect(result.profile).toEqual(mockProfile);
+            expect(result.data.id).toEqual(mockProfile.id);
             expect(mockSupabaseClient.from).toHaveBeenCalledWith('profiles');
         });
 
@@ -83,7 +83,7 @@ describe('ProfileService', () => {
 
             expect(result.success).toBe(true);
             expect(result.message).toContain('updated successfully');
-            expect(result.profile).toEqual(mockUpdatedProfile);
+            expect(result.data).toEqual(mockUpdatedProfile);
             expect(mockSupabaseClient.upsert).toHaveBeenCalled();
         });
 

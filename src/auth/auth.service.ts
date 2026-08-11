@@ -15,6 +15,18 @@ export class AuthService {
 
   constructor(private readonly supabase: SupabaseService) { }
 
+  private async updateDevicePlatform(userId: string, platform?: string) {
+    if (!platform || !userId) return;
+    try {
+      await this.supabase.client
+        .from('profiles')
+        .update({ device_platform: platform })
+        .eq('id', userId);
+    } catch (err) {
+      this.logger.warn(`Could not update device_platform for ${userId}: ${err?.message}`);
+    }
+  }
+
   async signup(dto: SignupDto) {
     // 1. First attempt standard signUp
     const { data: signUpData, error: signUpError } = await this.supabase.client.auth.signUp({
@@ -25,7 +37,6 @@ export class AuthService {
     let user = signUpData?.user;
 
     if (signUpError) {
-      // If user already exists, attempt to fetch user
       this.logger.warn(`signUp error for ${dto.email}: ${signUpError.message}`);
     }
 
@@ -47,6 +58,7 @@ export class AuthService {
     });
 
     if (loginData?.session) {
+      this.updateDevicePlatform(loginData.user.id, dto.device_platform);
       return {
         success: true,
         message: 'Account created successfully.',
@@ -104,6 +116,8 @@ export class AuthService {
     const session = data.session;
     const user = data.user;
 
+    this.updateDevicePlatform(user.id, dto.device_platform);
+
     return {
       success: true,
       message: 'You are logged in successfully.',
@@ -142,15 +156,17 @@ export class AuthService {
 
   async googleLogin(dto: GoogleLoginDto) {
     try {
-      const { data, error } = await this.supabase.client.auth.signInWithIdToken(
-        {
-          provider: 'google',
-          token: dto.idToken,
-        },
-      );
+      // The free @react-native-google-signin/google-signin (v16) does NOT support
+      // custom nonces on iOS. We rely on Supabase "Skip nonce checks" setting.
+      // If nonce is provided (e.g. from Android), we pass it through.
+      const { data, error } = await this.supabase.client.auth.signInWithIdToken({
+        provider: 'google',
+        token: dto.idToken,
+        ...(dto.nonce ? { nonce: dto.nonce } : {}),
+      });
 
       if (error) {
-        this.logger.warn('Google login failed', error.message);
+        this.logger.warn(`Google login failed: ${error.message}`);
         throw new UnauthorizedException(`Google login failed: ${error.message}`);
       }
 
@@ -159,6 +175,9 @@ export class AuthService {
       if (!session) {
         throw new UnauthorizedException('Invalid session data');
       }
+
+      this.updateDevicePlatform(user.id, dto.device_platform);
+      this.logger.log(`Google login successful for ${user.email} (${user.id})`);
 
       return {
         success: true,
@@ -175,6 +194,7 @@ export class AuthService {
         },
       };
     } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
       this.logger.error('Google login error', err.message);
       throw new UnauthorizedException(`Google login failed: ${err.message}`);
     }
