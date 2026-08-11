@@ -15,6 +15,20 @@ export class AuthService {
 
   constructor(private readonly supabase: SupabaseService) { }
 
+  private async getOnboardedStatus(userId: string): Promise<boolean> {
+    if (!userId) return false;
+    try {
+      const { data } = await this.supabase.client
+        .from('profiles')
+        .select('is_onboarded')
+        .eq('id', userId)
+        .maybeSingle();
+      return data?.is_onboarded || false;
+    } catch {
+      return false;
+    }
+  }
+
   private async updateDevicePlatform(userId: string, platform?: string) {
     if (!platform || !userId) return;
     try {
@@ -91,7 +105,7 @@ export class AuthService {
     if (error && error.code === 'email_not_confirmed') {
       try {
         const { data: usersData } = await this.supabase.client.auth.admin.listUsers();
-        const existingUser = usersData?.users?.find((u) => u.email === dto.email);
+        const existingUser = usersData?.users?.find((u: any) => u.email === dto.email);
         if (existingUser) {
           await this.supabase.client.auth.admin.updateUserById(existingUser.id, {
             email_confirm: true,
@@ -117,6 +131,7 @@ export class AuthService {
     const user = data.user;
 
     this.updateDevicePlatform(user.id, dto.device_platform);
+    const isOnboarded = await this.getOnboardedStatus(user.id);
 
     return {
       success: true,
@@ -130,7 +145,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
-        is_onboarded: user.app_metadata?.is_onboarded || false,
+        is_onboarded: isOnboarded,
       },
     };
   }
@@ -190,7 +205,7 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          is_onboarded: user.app_metadata?.is_onboarded || false,
+          is_onboarded: await this.getOnboardedStatus(user.id),
         },
       };
     } catch (err) {
@@ -263,7 +278,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         email_confirmed_at: user.email_confirmed_at,
-        is_onboarded: user.app_metadata?.is_onboarded || false,
+        is_onboarded: await this.getOnboardedStatus(user.id),
       },
     };
   }

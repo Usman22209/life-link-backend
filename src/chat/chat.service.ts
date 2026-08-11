@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
+import { NotificationService } from '../notification/notification.service';
+
 function timeAgo(date: string | Date): string {
     if (!date) return 'Just now';
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -18,7 +20,10 @@ function timeAgo(date: string | Date): string {
 export class ChatService {
     private readonly logger = new Logger(ChatService.name);
 
-    constructor(private readonly supabase: SupabaseService) { }
+    constructor(
+        private readonly supabase: SupabaseService,
+        private readonly notificationService: NotificationService,
+    ) { }
 
     async getThreads(userId: string) {
         const { data: threads, error } = await this.supabase.client
@@ -245,6 +250,41 @@ export class ChatService {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', threadId);
+
+        // Fetch thread details to trigger Push Notification for chat message recipient
+        try {
+            const { data: thread } = await this.supabase.client
+                .from('chat_threads')
+                .select('requester_id, donor_id, request_id')
+                .eq('id', threadId)
+                .single();
+
+            if (thread) {
+                const recipientId = thread.requester_id === userId ? thread.donor_id : thread.requester_id;
+
+                // Fetch sender name
+                const { data: senderProfile } = await this.supabase.client
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', userId)
+                    .single();
+
+                const senderName = senderProfile?.full_name || 'Someone';
+
+                await this.notificationService.sendToUser(
+                    recipientId,
+                    `💬 ${senderName}`,
+                    dto.text,
+                    {
+                        type: 'chat_message',
+                        thread_id: threadId,
+                        request_id: thread.request_id,
+                    }
+                );
+            }
+        } catch (notifErr) {
+            this.logger.warn(`Failed to send push notification for chat message: ${notifErr.message}`);
+        }
 
         return {
             success: true,
