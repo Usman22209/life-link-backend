@@ -71,23 +71,19 @@ export class ProfileService {
         const donationsCount = donations?.length || 0;
         const livesSaved = donationsCount * 3;
 
-        let lastDonatedAt: string | null = profileData?.last_donated_at || null;
+        let lastDonatedAt: string | null = null;
         let isEligible = true;
         let nextEligibleDate: string | null = null;
 
         if (donations && donations.length > 0) {
             const lastDonation = donations[0];
-            const lastDateStr = lastDonation.updated_at || lastDonation.created_at;
-            if (!lastDonatedAt || new Date(lastDateStr) > new Date(lastDonatedAt)) {
-                lastDonatedAt = new Date(lastDateStr).toISOString().split('T')[0];
-            }
-        }
+            const lastDate = new Date(lastDonation.updated_at || lastDonation.created_at);
+            lastDonatedAt = lastDate.toISOString().split('T')[0];
 
-        if (lastDonatedAt) {
-            const lastDate = new Date(lastDonatedAt);
             const nextEligible = new Date(lastDate);
             nextEligible.setDate(nextEligible.getDate() + 90);
             nextEligibleDate = nextEligible.toISOString().split('T')[0];
+
             isEligible = new Date() >= nextEligible;
         }
 
@@ -160,19 +156,36 @@ export class ProfileService {
     }
 
     async deleteProfile(userId: string) {
-        const { error } = await this.supabase.client
+        this.logger.log(`Initiating account deletion for user ${userId}`);
+
+        // 1. Cancel all open blood requests created by this user so donors don't see orphaned requests
+        await this.supabase.client
+            .from('blood_requests')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('requester_id', userId)
+            .eq('status', 'open');
+
+        // 2. Delete user profile record (Cascades to notifications & chat threads via FK ON DELETE CASCADE)
+        const { error: profileError } = await this.supabase.client
             .from('profiles')
             .delete()
             .eq('id', userId);
 
-        if (error) {
-            this.logger.error(`Error deleting profile for user ${userId}`, error.message);
-            throw new BadRequestException(`Could not delete profile: ${error.message}`);
+        if (profileError) {
+            this.logger.error(`Error deleting profile for user ${userId}`, profileError.message);
+            throw new BadRequestException(`Could not delete profile: ${profileError.message}`);
+        }
+
+        // 3. Delete user account from Supabase Auth admin so credentials & JWT tokens are permanently revoked
+        try {
+            await this.supabase.client.auth.admin.deleteUser(userId);
+        } catch (authErr) {
+            this.logger.warn(`Could not delete user ${userId} from Auth admin: ${authErr.message}`);
         }
 
         return {
             success: true,
-            message: 'User account permanently deleted.',
+            message: 'User account and associated profile permanently deleted.',
         };
     }
 

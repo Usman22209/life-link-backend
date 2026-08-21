@@ -20,10 +20,10 @@ export class AuthService {
     try {
       const { data } = await this.supabase.client
         .from('profiles')
-        .select('is_onboarded')
+        .select('is_onboarded, phone, blood_group')
         .eq('id', userId)
         .maybeSingle();
-      return data?.is_onboarded || false;
+      return !!(data?.is_onboarded || (data?.phone && data?.blood_group));
     } catch {
       return false;
     }
