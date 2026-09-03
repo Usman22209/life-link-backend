@@ -49,7 +49,23 @@ export class NotificationService {
             this.logger.warn(`Failed to insert notification record in DB: ${dbErr.message}`);
         }
 
-        // 2. Push via OneSignal
+        // 2. Check if user has disabled notifications
+        try {
+            const { data: recipientProfile } = await this.supabase.client
+                .from('profiles')
+                .select('notifications_enabled')
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (recipientProfile && recipientProfile.notifications_enabled === false) {
+                this.logger.log(`User ${userId} has push notifications disabled. Skipping push.`);
+                return { success: true, skipped: true };
+            }
+        } catch (checkErr) {
+            this.logger.warn(`Could not check notifications_enabled for user ${userId}: ${checkErr.message}`);
+        }
+
+        // 3. Push via OneSignal
         if (!this.apiKey || !this.appId) {
             this.logger.warn('OneSignal credentials missing in environment variables');
             return { success: true };

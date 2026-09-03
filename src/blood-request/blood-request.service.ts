@@ -30,8 +30,9 @@ function timeAgo(date: string | Date): string {
     return `${days}d ago`;
 }
 
-function getDefaultRequiredDate(urgency?: string): string {
-    const date = new Date();
+function getDefaultRequiredDate(urgency?: string, fromDate?: string | Date): string {
+    const base = fromDate ? new Date(fromDate) : new Date();
+    const date = new Date(base.getTime());
     const urg = urgency?.toLowerCase();
     if (urg === 'critical') {
         date.setHours(date.getHours() + 48); // 48 Hours for Critical
@@ -50,7 +51,7 @@ function calculateTimeLeft(requiredDateStr?: string): { isExpired: boolean; time
 
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     if (hours < 24) return { isExpired: false, timeLeft: `${hours}h left` };
-    const days = Math.floor(hours / 24);
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     return { isExpired: false, timeLeft: `${days}d left` };
 }
 
@@ -101,10 +102,13 @@ export class BloodRequestService {
                 requester:profiles(id, phone, blood_group, city_id, profile_image)
             `);
 
-        // Include all active/open requests for public feed (supporting all 17 database requests)
+        // Include all active/open requests for public feed (filter out expired, fulfilled, and cancelled)
         if (requestStatus === BloodRequestStatus.OPEN || requestStatus === 'open') {
-            countQuery = countQuery.neq('status', 'cancelled');
-            dataQuery = dataQuery.neq('status', 'cancelled');
+            countQuery = countQuery.neq('status', 'cancelled').neq('status', 'fulfilled').neq('status', 'expired').gte('required_date', nowIso);
+            dataQuery = dataQuery.neq('status', 'cancelled').neq('status', 'fulfilled').neq('status', 'expired').gte('required_date', nowIso);
+        } else if (requestStatus === BloodRequestStatus.EXPIRED || requestStatus === 'expired') {
+            countQuery = countQuery.or(`status.eq.expired,required_date.lt.${nowIso}`);
+            dataQuery = dataQuery.or(`status.eq.expired,required_date.lt.${nowIso}`);
         } else if (requestStatus && requestStatus !== 'all') {
             countQuery = countQuery.ilike('status', requestStatus);
             dataQuery = dataQuery.ilike('status', requestStatus);
@@ -164,8 +168,11 @@ export class BloodRequestService {
                 const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
                 const unitsReq = req.units_required || 1;
                 const fulfilled = req.fulfilled_units || 0;
+                const hidePhone = req.hide_phone_number === true || req.requester?.hide_phone_number === true;
                 return {
                     ...req,
+                    contact_number: hidePhone ? null : (req.contact_number || req.requester?.phone),
+                    hide_phone_number: hidePhone,
                     units_required: unitsReq,
                     fulfilled_units: fulfilled,
                     units_remaining: Math.max(0, unitsReq - fulfilled),
@@ -242,9 +249,12 @@ export class BloodRequestService {
             .from('blood_requests')
             .select(`
                 *,
-                requester:profiles(full_name, profile_image, city_id, state)
+                requester:profiles(id, phone, blood_group, city_id, profile_image)
             `)
             .neq('status', 'cancelled')
+            .neq('status', 'fulfilled')
+            .neq('status', 'expired')
+            .gte('required_date', nowIso)
             .in('urgency', ['critical', 'high', 'CRITICAL', 'HIGH', 'urgent', 'URGENT'])
             .order('created_at', { ascending: false })
             .limit(limit);
@@ -261,23 +271,26 @@ export class BloodRequestService {
             const fulfilled = req.fulfilled_units || 0;
             return {
                 id: req.id,
-                bloodType: req.blood_group,
+                bloodType: req.blood_group || 'O+',
                 patientName: req.patient_name || 'Patient',
-                hospital: req.hospital_name,
-                city: req.city_id || 'Lahore',
+                hospital: req.hospital_name || 'Hospital',
+                city: req.city_id || 'city_lahore',
                 state: req.requester?.state || 'Punjab',
-                patientImage: req.requester?.profile_image || 'https://cdn.lifelink.org/avatars/patient1.jpg',
+                patientImage: req.requester?.profile_image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop',
                 units: unitsReq,
                 fulfilledUnits: fulfilled,
                 unitsRemaining: Math.max(0, unitsReq - fulfilled),
                 progressPercentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
-                urgency: req.urgency,
+                urgency: (req.urgency || 'urgent').toLowerCase(),
                 time: timeAgo(req.created_at),
                 timeLeft,
                 isExpired,
                 distance: distanceStr,
-                latitude: req.latitude,
-                longitude: req.longitude,
+                latitude: req.latitude ? Number(req.latitude) : undefined,
+                longitude: req.longitude ? Number(req.longitude) : undefined,
+                requester_id: req.requester_id || req.requester?.id,
+                hide_phone_number: req.hide_phone_number === true || req.requester?.hide_phone_number === true,
+                contact_number: (req.hide_phone_number === true || req.requester?.hide_phone_number === true) ? null : (req.contact_number || req.requester?.phone),
             };
         });
 
@@ -370,10 +383,13 @@ export class BloodRequestService {
         const unitsReq = data.units_required || 1;
         const fulfilled = data.fulfilled_units || 0;
 
+        const hidePhone = data.hide_phone_number === true || data.requester?.hide_phone_number === true;
         return {
             success: true,
             data: {
                 ...data,
+                contact_number: hidePhone ? null : (data.contact_number || data.requester?.phone),
+                hide_phone_number: hidePhone,
                 units_required: unitsReq,
                 fulfilled_units: fulfilled,
                 units_remaining: Math.max(0, unitsReq - fulfilled),

@@ -7,6 +7,11 @@ export class UpdateSettingsDto {
   @IsBoolean()
   notifications_enabled?: boolean;
 
+  @ApiPropertyOptional({ description: 'Hide phone number and only allow in-app chat' })
+  @IsOptional()
+  @IsBoolean()
+  hide_phone_number?: boolean;
+
   @ApiPropertyOptional({ description: 'Language preference' })
   @IsOptional()
   @IsString()

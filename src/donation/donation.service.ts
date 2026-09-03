@@ -50,6 +50,22 @@ export class DonationService {
             }
         }
 
+        // 2b. Prevent multiple donations by the same donor for the same request
+        const { data: existingDonation } = await this.supabase.client
+            .from('donations')
+            .select('id, status')
+            .eq('request_id', requestId)
+            .eq('donor_id', donorId)
+            .neq('status', 'cancelled')
+            .maybeSingle();
+
+        if (existingDonation) {
+            if (existingDonation.status === 'completed') {
+                throw new BadRequestException('You have already completed a donation for this request.');
+            }
+            throw new BadRequestException('You have already pledged to donate for this blood request.');
+        }
+
         // 3. Create donation record
         const { data: donation, error: donationError } = await this.supabase.client
             .from('donations')
@@ -200,7 +216,32 @@ export class DonationService {
             throw new BadRequestException(`Could not fetch donations: ${error.message}`);
         }
 
-        const donations = data || [];
+        const rawDonations = data || [];
+
+        // Enrich donor details directly from profiles table to ensure real full_name is always present
+        const donations = await Promise.all(
+            rawDonations.map(async (d: any) => {
+                let donor = d.donor;
+                if (!donor || !donor.full_name) {
+                    const { data: donorProfile } = await this.supabase.client
+                        .from('profiles')
+                        .select('id, full_name, profile_image, phone, blood_group')
+                        .eq('id', d.donor_id)
+                        .maybeSingle();
+                    if (donorProfile) {
+                        donor = donorProfile;
+                    }
+                }
+                return {
+                    ...d,
+                    donor: donor || {
+                        id: d.donor_id,
+                        full_name: 'Donor',
+                    },
+                };
+            })
+        );
+
         const stats = {
             total: donations.length,
             intent: donations.filter((d: any) => d.status === 'intent').length,

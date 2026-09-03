@@ -90,63 +90,82 @@ export class ChatService {
             };
         }));
 
+        // Deduplicate threads: Keep only latest thread per request & participant
+        const seen = new Set<string>();
+        const uniqueFormatted = formatted.filter((item: any) => {
+            const key = `${item.request_id || item.request?.id}_${item.participant?.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
         return {
             success: true,
-            data: formatted,
+            data: uniqueFormatted,
         };
     }
 
-    async getMessages(userId: string, threadId: string, page: number = 1, limit: number = 20) {
-        // Verify thread exists
+    async getMessages(userId: string, threadId: string, page: number = 1, limit: number = 200) {
+        let activeThreadId = threadId;
+
+        // 1. Verify if thread exists by chat_threads.id
         const { data: thread } = await this.supabase.client
             .from('chat_threads')
             .select('id')
             .eq('id', threadId)
             .maybeSingle();
 
-        if (!thread) {
-            return {
-                success: true,
-                data: {
-                    thread_id: threadId,
-                    messages: [],
-                    pagination: { page, limit, total: 0 },
-                },
-            };
+        if (thread) {
+            activeThreadId = thread.id;
+        } else {
+            // 2. If not found by thread ID, check if threadId is actually a request_id
+            const { data: threadByReq } = await this.supabase.client
+                .from('chat_threads')
+                .select('id')
+                .eq('request_id', threadId)
+                .or(`requester_id.eq.${userId},donor_id.eq.${userId}`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (threadByReq) {
+                activeThreadId = threadByReq.id;
+            } else {
+                return {
+                    success: true,
+                    data: {
+                        thread_id: threadId,
+                        messages: [],
+                        pagination: { page, limit, total: 0 },
+                    },
+                };
+            }
         }
 
         // Mark unread messages as read
         await this.supabase.client
             .from('chat_messages')
             .update({ is_read: true })
-            .eq('thread_id', threadId)
+            .eq('thread_id', activeThreadId)
             .neq('sender_id', userId);
-
-        const skip = (page - 1) * limit;
-
-        const { count } = await this.supabase.client
-            .from('chat_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('thread_id', threadId);
 
         const { data, error } = await this.supabase.client
             .from('chat_messages')
             .select('*')
-            .eq('thread_id', threadId)
-            .order('sent_at', { ascending: true })
-            .range(skip, skip + limit - 1);
+            .eq('thread_id', activeThreadId)
+            .order('sent_at', { ascending: true });
 
         if (error) {
-            this.logger.error(`Error fetching messages for thread ${threadId}`, error.message);
+            this.logger.error(`Error fetching messages for thread ${activeThreadId}`, error.message);
             throw new BadRequestException(`Could not fetch messages: ${error.message}`);
         }
 
-        const total = count || 0;
+        const total = (data || []).length;
 
         return {
             success: true,
             data: {
-                thread_id: threadId,
+                thread_id: activeThreadId,
                 messages: data || [],
                 pagination: {
                     page,
@@ -194,7 +213,7 @@ export class ChatService {
                 .from('chat_threads')
                 .select('id')
                 .eq('request_id', dto.request_id)
-                .or(`and(requester_id.eq.${requesterId},donor_id.eq.${donorId}),and(requester_id.eq.${donorId},donor_id.eq.${requesterId})`)
+                .or(`requester_id.eq.${userId},donor_id.eq.${userId}`)
                 .maybeSingle();
 
             if (existingThread) {
