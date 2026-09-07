@@ -282,4 +282,49 @@ export class AuthService {
       },
     };
   }
+
+  async adminLogin(dto: LoginDto) {
+    // 1. Normal Supabase login first
+    const { data, error } = await this.supabase.client.auth.signInWithPassword({
+      email: dto.email,
+      password: dto.password,
+    });
+
+    if (error || !data?.session) {
+      this.logger.warn(`Admin login failed for ${dto.email}: ${error?.message}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const { session, user } = data;
+
+    // 2. Check is_admin flag in profiles table
+    const { data: profile } = await this.supabase.client
+      .from('profiles')
+      .select('is_admin, full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin) {
+      this.logger.warn(`Non-admin user ${dto.email} attempted admin login`);
+      throw new UnauthorizedException('You do not have admin access');
+    }
+
+    this.logger.log(`Admin login successful for ${dto.email}`);
+
+    return {
+      success: true,
+      message: 'Admin login successful.',
+      session: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: profile.full_name || user.email,
+        is_admin: true,
+      },
+    };
+  }
 }

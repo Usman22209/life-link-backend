@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { AnalyticsController } from './analytics.controller';
+import { AnalyticsService } from './analytics.service';
+import { SupabaseModule } from '../supabase/supabase.module';
+
+@Module({
+    imports: [SupabaseModule],
+    controllers: [AnalyticsController],
+    providers: [AnalyticsService],
+    exports: [AnalyticsService],
+})
+export class AnalyticsModule { }

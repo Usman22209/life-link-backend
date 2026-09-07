@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
 import { UpdateBloodRequestDto, BloodRequestStatus } from './dto/update-blood-request.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { resolveLocation } from '../common/utils/location.util';
 
 function calculateDistance(lat1?: number, lon1?: number, lat2?: number, lon2?: number): string {
     if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return 'N/A';
@@ -169,8 +170,20 @@ export class BloodRequestService {
                 const unitsReq = req.units_required || 1;
                 const fulfilled = req.fulfilled_units || 0;
                 const hidePhone = req.hide_phone_number === true || req.requester?.hide_phone_number === true;
+                const loc = resolveLocation(req.city_id, req.city, req.state, req.country || req.requester?.country);
                 return {
                     ...req,
+                    city_id: req.city_id || loc.city_id,
+                    city: loc.city,
+                    city_name: loc.city_name,
+                    state: loc.state,
+                    country: loc.country,
+                    location_formatted: loc.location_formatted,
+                    requester: req.requester ? {
+                        ...req.requester,
+                        city: resolveLocation(req.requester.city_id, req.requester.city).city,
+                        country: req.requester.country || 'Pakistan',
+                    } : req.requester,
                     contact_number: hidePhone ? null : (req.contact_number || req.requester?.phone),
                     hide_phone_number: hidePhone,
                     units_required: unitsReq,
@@ -191,8 +204,8 @@ export class BloodRequestService {
                 rawSort === 'most_units'
                     ? 'units_required'
                     : rawSort === 'urgency'
-                    ? 'urgency'
-                    : 'created_at';
+                        ? 'urgency'
+                        : 'created_at';
 
             const isAscending = pagination.sort_order === 'asc';
 
@@ -211,8 +224,23 @@ export class BloodRequestService {
                 const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
                 const unitsReq = req.units_required || 1;
                 const fulfilled = req.fulfilled_units || 0;
+                const hidePhone = req.hide_phone_number === true || req.requester?.hide_phone_number === true;
+                const loc = resolveLocation(req.city_id, req.city, req.state, req.country || req.requester?.country);
                 return {
                     ...req,
+                    city_id: req.city_id || loc.city_id,
+                    city: loc.city,
+                    city_name: loc.city_name,
+                    state: loc.state,
+                    country: loc.country,
+                    location_formatted: loc.location_formatted,
+                    requester: req.requester ? {
+                        ...req.requester,
+                        city: resolveLocation(req.requester.city_id, req.requester.city).city,
+                        country: req.requester.country || 'Pakistan',
+                    } : req.requester,
+                    contact_number: hidePhone ? null : (req.contact_number || req.requester?.phone),
+                    hide_phone_number: hidePhone,
                     units_required: unitsReq,
                     fulfilled_units: fulfilled,
                     units_remaining: Math.max(0, unitsReq - fulfilled),
@@ -269,13 +297,18 @@ export class BloodRequestService {
             const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
             const unitsReq = req.units_required || 1;
             const fulfilled = req.fulfilled_units || 0;
+            const loc = resolveLocation(req.city_id, req.city, req.state, req.country || req.requester?.country);
             return {
                 id: req.id,
                 bloodType: req.blood_group || 'O+',
                 patientName: req.patient_name || 'Patient',
                 hospital: req.hospital_name || 'Hospital',
-                city: req.city_id || 'city_lahore',
-                state: req.requester?.state || 'Punjab',
+                city_id: req.city_id || loc.city_id,
+                city: loc.city,
+                city_name: loc.city_name,
+                state: req.requester?.state || loc.state,
+                country: loc.country,
+                location_formatted: loc.location_formatted,
                 patientImage: req.requester?.profile_image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop',
                 units: unitsReq,
                 fulfilledUnits: fulfilled,
@@ -330,8 +363,15 @@ export class BloodRequestService {
             const { isExpired, timeLeft } = calculateTimeLeft(req.required_date);
             const unitsReq = req.units_required || 1;
             const fulfilled = req.fulfilled_units || 0;
+            const loc = resolveLocation(req.city_id, req.city, req.state, req.country);
             return {
                 ...req,
+                city_id: req.city_id || loc.city_id,
+                city: loc.city,
+                city_name: loc.city_name,
+                state: loc.state,
+                country: loc.country,
+                location_formatted: loc.location_formatted,
                 units_required: unitsReq,
                 fulfilled_units: fulfilled,
                 units_remaining: Math.max(0, unitsReq - fulfilled),
@@ -366,7 +406,7 @@ export class BloodRequestService {
             .from('blood_requests')
             .select(`
                 *,
-                requester:profiles(id, phone, blood_group, city_id, profile_image)
+                requester:profiles(id, full_name, phone, blood_group, city_id, profile_image)
             `)
             .eq('id', id)
             .single();
@@ -382,12 +422,24 @@ export class BloodRequestService {
         const { isExpired, timeLeft } = calculateTimeLeft(data.required_date);
         const unitsReq = data.units_required || 1;
         const fulfilled = data.fulfilled_units || 0;
+        const loc = resolveLocation(data.city_id, data.city, data.state, data.country || data.requester?.country);
 
         const hidePhone = data.hide_phone_number === true || data.requester?.hide_phone_number === true;
         return {
             success: true,
             data: {
                 ...data,
+                city_id: data.city_id || loc.city_id,
+                city: loc.city,
+                city_name: loc.city_name,
+                state: loc.state,
+                country: loc.country,
+                location_formatted: loc.location_formatted,
+                requester: data.requester ? {
+                    ...data.requester,
+                    city: resolveLocation(data.requester.city_id, data.requester.city).city,
+                    country: data.requester.country || 'Pakistan',
+                } : data.requester,
                 contact_number: hidePhone ? null : (data.contact_number || data.requester?.phone),
                 hide_phone_number: hidePhone,
                 units_required: unitsReq,
@@ -433,6 +485,51 @@ export class BloodRequestService {
         return {
             success: true,
             message: 'Blood request updated successfully.',
+            data,
+        };
+    }
+
+    async updateStatus(id: string, status: string) {
+        const normalizedStatus = status.toLowerCase();
+
+        // 1. Fetch existing request
+        const { data: request, error: fetchError } = await this.supabase.client
+            .from('blood_requests')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !request) {
+            throw new NotFoundException('Blood request not found');
+        }
+
+        const updatePayload: any = {
+            status: normalizedStatus,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (normalizedStatus === 'fulfilled' && (!request.fulfilled_units || request.fulfilled_units < request.units_required)) {
+            updatePayload.fulfilled_units = request.units_required || 1;
+        }
+
+        const { data, error } = await this.supabase.client
+            .from('blood_requests')
+            .update(updatePayload)
+            .eq('id', id)
+            .select(`
+                *,
+                requester:profiles(id, full_name, phone, blood_group, city_id, profile_image)
+            `)
+            .single();
+
+        if (error) {
+            this.logger.error(`Error updating blood request status for ${id}`, error.message);
+            throw new BadRequestException(`Could not update blood request status: ${error.message}`);
+        }
+
+        return {
+            success: true,
+            message: `Blood request status updated to ${normalizedStatus}.`,
             data,
         };
     }

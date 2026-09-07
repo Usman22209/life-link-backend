@@ -13,6 +13,9 @@ import { BloodRequestModule } from './blood-request/blood-request.module';
 import { DonationModule } from './donation/donation.module';
 import { ChatModule } from './chat/chat.module';
 import { SupportModule } from './support/support.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { SupportModule } from './support/support.module';
     DonationModule,
     ChatModule,
     SupportModule,
+    DashboardModule,
+    AnalyticsModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

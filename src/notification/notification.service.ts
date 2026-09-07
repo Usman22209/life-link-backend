@@ -75,12 +75,14 @@ export class NotificationService {
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Authorization': `Key ${this.apiKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     app_id: this.appId,
+                    include_aliases: { external_id: [userId] },
                     include_external_user_ids: [userId],
+                    target_channel: 'push',
                     headings: { en: title },
                     contents: { en: content },
                     data: extraData,
@@ -88,10 +90,44 @@ export class NotificationService {
             });
 
             const data = await response.json();
-            return { success: true, id: data.id };
+            if (data.errors) {
+                this.logger.warn(`OneSignal push response for user ${userId}: ${JSON.stringify(data.errors)}`);
+            }
+            return { success: true, id: data.id, details: data };
         } catch (error) {
             this.logger.error(`Failed to send push notification to user ${userId}`, error.stack);
             return { success: true, error: error.message };
+        }
+    }
+
+    async sendBroadcast(title: string, content: string, extraData: any = {}) {
+        if (!this.apiKey || !this.appId) {
+            this.logger.warn('OneSignal credentials missing in environment variables');
+            return { success: true };
+        }
+
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Key ${this.apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    app_id: this.appId,
+                    included_segments: ['Subscribed Users', 'Total Subscriptions'],
+                    headings: { en: title },
+                    contents: { en: content },
+                    data: extraData,
+                }),
+            });
+
+            const data = await response.json();
+            this.logger.log(`OneSignal broadcast dispatched. Response: ${JSON.stringify(data)}`);
+            return { success: true, id: data.id, details: data };
+        } catch (error) {
+            this.logger.error('Failed to send broadcast push notification', error.stack);
+            return { success: false, error: error.message };
         }
     }
 

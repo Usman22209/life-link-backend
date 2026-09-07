@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { DonorFilterDto } from './dto/donor-filter.dto';
+import { resolveLocation } from '../common/utils/location.util';
 
 const ABSTRACT_API_KEY = '9f114730630d45688a0f25dc3aac9a7e';
 
@@ -87,10 +89,17 @@ export class ProfileService {
             isEligible = new Date() >= nextEligible;
         }
 
+        const loc = resolveLocation(profileData.city_id, profileData.city, profileData.state, profileData.country);
         return {
             success: true,
             data: {
                 ...profileData,
+                city_id: profileData.city_id || loc.city_id,
+                city: loc.city,
+                city_name: loc.city_name,
+                state: loc.state,
+                country: loc.country,
+                location_formatted: loc.location_formatted,
                 email: email || profileData.email,
                 stats: {
                     donations_count: donationsCount,
@@ -209,6 +218,174 @@ export class ProfileService {
             success: true,
             message: 'Settings updated.',
             data,
+        };
+    }
+
+    async getDonors(filter: DonorFilterDto) {
+        let countQuery = this.supabase.client
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+
+        let dataQuery = this.supabase.client
+            .from('profiles')
+            .select('*');
+
+        if (filter.blood_group && filter.blood_group !== 'All' && filter.blood_group !== 'all') {
+            countQuery = countQuery.eq('blood_group', filter.blood_group);
+            dataQuery = dataQuery.eq('blood_group', filter.blood_group);
+        }
+
+        if (filter.city_id && filter.city_id !== 'All' && filter.city_id !== 'all') {
+            countQuery = countQuery.eq('city_id', filter.city_id);
+            dataQuery = dataQuery.eq('city_id', filter.city_id);
+        }
+
+        if (filter.is_available !== undefined) {
+            countQuery = countQuery.eq('is_available', filter.is_available);
+            dataQuery = dataQuery.eq('is_available', filter.is_available);
+        }
+
+        if (filter.search && filter.search.trim()) {
+            const pattern = `%${filter.search.trim()}%`;
+            const filterStr = `full_name.ilike.${pattern},phone.ilike.${pattern},city.ilike.${pattern},city_id.ilike.${pattern},state.ilike.${pattern}`;
+            countQuery = countQuery.or(filterStr);
+            dataQuery = dataQuery.or(filterStr);
+        }
+
+        const { count, error: countError } = await countQuery;
+        if (countError) {
+            this.logger.error(`Error counting donors: ${countError.message}`);
+        }
+
+        const limit = filter.limit ?? 10;
+        const page = filter.page ?? 1;
+        const skip = filter.skip ?? (page - 1) * limit;
+
+        const { data: profiles, error } = await dataQuery
+            .order('created_at', { ascending: false })
+            .range(skip, skip + limit - 1);
+
+        if (error) {
+            this.logger.error(`Error fetching donors list: ${error.message}`);
+            throw new BadRequestException(`Could not fetch donors: ${error.message}`);
+        }
+
+        // Fetch donation stats for donors
+        const donorIds = (profiles || []).map((p) => p.id);
+        const { data: donations } = await this.supabase.client
+            .from('donations')
+            .select('donor_id, created_at, updated_at, status')
+            .in('donor_id', donorIds.length > 0 ? donorIds : ['00000000-0000-0000-0000-000000000000'])
+            .eq('status', 'completed');
+
+        const donorStatsMap: { [key: string]: { count: number; lastDate: string | null } } = {};
+        (donations || []).forEach((d) => {
+            if (!donorStatsMap[d.donor_id]) {
+                donorStatsMap[d.donor_id] = { count: 0, lastDate: null };
+            }
+            donorStatsMap[d.donor_id].count++;
+            const dateStr = d.updated_at || d.created_at;
+            if (!donorStatsMap[d.donor_id].lastDate || new Date(dateStr) > new Date(donorStatsMap[d.donor_id].lastDate!)) {
+                donorStatsMap[d.donor_id].lastDate = dateStr;
+            }
+        });
+
+        const formattedDonors = (profiles || []).map((profile) => {
+            const statsInfo = donorStatsMap[profile.id];
+            const donationsCount = statsInfo?.count || 0;
+            const livesSaved = donationsCount * 3;
+            let lastDonatedAt = profile.last_donated_at || (statsInfo?.lastDate ? new Date(statsInfo.lastDate).toISOString().split('T')[0] : null);
+            let isEligible = true;
+            let nextEligibleDate: string | null = null;
+
+            if (lastDonatedAt) {
+                const lastDate = new Date(lastDonatedAt);
+                const nextEligible = new Date(lastDate);
+                nextEligible.setDate(nextEligible.getDate() + 90);
+                nextEligibleDate = nextEligible.toISOString().split('T')[0];
+                isEligible = new Date() >= nextEligible;
+            }
+
+            const loc = resolveLocation(profile.city_id, profile.city, profile.state, profile.country);
+            return {
+                ...profile,
+                city_id: profile.city_id || loc.city_id,
+                city: loc.city,
+                city_name: loc.city_name,
+                state: loc.state,
+                country: loc.country,
+                location_formatted: loc.location_formatted,
+                is_available: profile.is_available !== false,
+                is_verified: profile.is_verified !== false,
+                is_suspended: profile.is_suspended === true,
+                is_banned: profile.is_banned === true,
+                stats: {
+                    donations_count: donationsCount,
+                    lives_saved: livesSaved,
+                    last_donated_at: lastDonatedAt,
+                    is_eligible: isEligible,
+                    next_eligible_date: nextEligibleDate,
+                },
+            };
+        });
+
+        const total = count ?? 0;
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            success: true,
+            data: {
+                donors: formattedDonors,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1,
+                },
+            },
+        };
+    }
+
+    async updateAvailability(userId: string, isAvailable: boolean) {
+        try {
+            const { data, error } = await this.supabase.client
+                .from('profiles')
+                .update({
+                    is_available: isAvailable,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select()
+                .single();
+
+            if (!error && data) {
+                return {
+                    success: true,
+                    message: `Donor availability updated to ${isAvailable ? 'available' : 'unavailable'}.`,
+                    data: {
+                        id: userId,
+                        is_available: isAvailable,
+                        profile: data,
+                    },
+                };
+            }
+        } catch { }
+
+        // Fallback update
+        await this.supabase.client
+            .from('profiles')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', userId);
+
+        return {
+            success: true,
+            message: `Donor availability updated to ${isAvailable ? 'available' : 'unavailable'}.`,
+            data: {
+                id: userId,
+                is_available: isAvailable,
+            },
         };
     }
 }

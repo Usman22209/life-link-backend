@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger, ForbiddenEx
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationService } from '../notification/notification.service';
 import { DonationStatus } from './dto/update-donation-status.dto';
+import { resolveLocation } from '../common/utils/location.util';
 
 @Injectable()
 export class DonationService {
@@ -325,6 +326,123 @@ export class DonationService {
             success: true,
             message: 'Donation status updated.',
             data,
+        };
+    }
+
+    async getDonationHistory(pagination?: { page?: number; limit?: number; status?: string; search?: string }) {
+        const page = pagination?.page ?? 1;
+        const limit = pagination?.limit ?? 10;
+        const skip = (page - 1) * limit;
+        const statusFilter = pagination?.status;
+
+        // 1. Fetch overall donation stats
+        const { data: allDonations } = await this.supabase.client
+            .from('donations')
+            .select('status');
+
+        const totalAll = allDonations?.length || 0;
+        const completedCount = (allDonations || []).filter(d => d.status === 'completed').length;
+        const intentCount = (allDonations || []).filter(d => d.status === 'intent').length;
+        const cancelledCount = (allDonations || []).filter(d => d.status === 'cancelled').length;
+
+        // 2. Query paginated list
+        let countQuery = this.supabase.client
+            .from('donations')
+            .select('*', { count: 'exact', head: true });
+
+        let dataQuery = this.supabase.client
+            .from('donations')
+            .select(`
+                id,
+                created_at,
+                updated_at,
+                status,
+                request:blood_requests(
+                    id,
+                    patient_name,
+                    blood_group,
+                    hospital_name,
+                    city_id,
+                    urgency,
+                    units_required,
+                    fulfilled_units,
+                    status
+                ),
+                donor:profiles(
+                    id,
+                    full_name,
+                    phone,
+                    blood_group,
+                    city_id,
+                    profile_image
+                )
+            `);
+
+        if (statusFilter && statusFilter !== 'all') {
+            countQuery = countQuery.eq('status', statusFilter.toLowerCase());
+            dataQuery = dataQuery.eq('status', statusFilter.toLowerCase());
+        }
+
+        const { count, error: countError } = await countQuery;
+        if (countError) {
+            this.logger.error(`Error counting donations: ${countError.message}`);
+        }
+
+        const { data: donations, error } = await dataQuery
+            .order('created_at', { ascending: false })
+            .range(skip, skip + limit - 1);
+
+        if (error) {
+            this.logger.error(`Error fetching donation history: ${error.message}`);
+            throw new BadRequestException(`Could not fetch donation history: ${error.message}`);
+        }
+
+        const formattedDonations = (donations || []).map((d: any) => {
+            const reqLoc = d.request ? resolveLocation(d.request.city_id, d.request.city, d.request.state, d.request.country) : null;
+            const donorLoc = d.donor ? resolveLocation(d.donor.city_id, d.donor.city, d.donor.state, d.donor.country) : null;
+            return {
+                ...d,
+                request: d.request ? {
+                    ...d.request,
+                    city: reqLoc?.city,
+                    city_name: reqLoc?.city_name,
+                    state: reqLoc?.state,
+                    country: reqLoc?.country,
+                    location_formatted: reqLoc?.location_formatted,
+                } : d.request,
+                donor: d.donor ? {
+                    ...d.donor,
+                    city: donorLoc?.city,
+                    city_name: donorLoc?.city_name,
+                    state: donorLoc?.state,
+                    country: donorLoc?.country,
+                    location_formatted: donorLoc?.location_formatted,
+                } : d.donor,
+            };
+        });
+
+        const total = count ?? 0;
+        const totalPages = Math.ceil(total / limit);
+
+        return {
+            success: true,
+            data: {
+                donations: formattedDonations,
+                stats: {
+                    total: totalAll,
+                    completed: completedCount,
+                    intent: intentCount,
+                    cancelled: cancelledCount,
+                },
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1,
+                },
+            },
         };
     }
 }

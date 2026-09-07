@@ -93,4 +93,17 @@ export class AuthController {
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshSession(dto.refresh_token);
   }
+
+  @Post('admin-login')
+  @ApiOperation({
+    summary: 'Admin dashboard login',
+    description: 'Login for admin dashboard. Only users with is_admin=true in profiles can access.',
+  })
+  @ApiResponse({ status: 200, description: 'Admin login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials or not an admin' })
+  adminLogin(@Body() dto: LoginDto) {
+    return this.authService.adminLogin(dto);
+  }
+
+  
 }

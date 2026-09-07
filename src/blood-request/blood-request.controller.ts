@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { BloodRequestService } from './blood-request.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
 import { UpdateBloodRequestDto } from './dto/update-blood-request.dto';
+import { UpdateBloodRequestStatusDto } from './dto/update-blood-request-status.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { AuthGuard } from '../auth/auth.guard';
 
@@ -56,6 +57,16 @@ export class BloodRequestController {
     @ApiResponse({ status: 404, description: 'Request not found' })
     findOne(@Param('id') id: string) {
         return this.bloodRequestService.getOne(id);
+    }
+
+    @Patch(':id/status')
+    @ApiOperation({ summary: 'Update status of a blood request (Dashboard & Mobile)' })
+    @ApiResponse({ status: 200, description: 'Request status updated successfully' })
+    updateStatus(
+        @Param('id') id: string,
+        @Body() dto: UpdateBloodRequestStatusDto,
+    ) {
+        return this.bloodRequestService.updateStatus(id, dto.status);
     }
 
     @Patch(':id')
