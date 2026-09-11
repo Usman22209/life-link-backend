@@ -201,7 +201,15 @@ export class DonationService {
         }
 
         if (request.requester_id !== userId) {
-            throw new ForbiddenException('You only view applications for requests you created');
+            const { data: profile } = await this.supabase.client
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (!profile?.is_admin) {
+                throw new ForbiddenException('You only view applications for requests you created');
+            }
         }
 
         const { data, error } = await this.supabase.client
@@ -212,7 +220,7 @@ export class DonationService {
             `)
             .eq('request_id', requestId)
             .order('created_at', { ascending: false });
-
+        
         if (error) {
             throw new BadRequestException(`Could not fetch donations: ${error.message}`);
         }

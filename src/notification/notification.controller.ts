@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationService } from './notification.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -15,6 +15,14 @@ export class NotificationController {
     @ApiResponse({ status: 200, description: 'Notifications fetched successfully' })
     getNotifications(@Req() req: any) {
         return this.notificationService.getNotifications(req.user.id);
+    }
+
+
+    @Post('broadcast')
+    @ApiOperation({ summary: 'Dispatch broadcast emergency push notification & in-app alert to matching donors' })
+    @ApiResponse({ status: 200, description: 'Broadcast dispatched successfully' })
+    broadcast(@Body() dto: any) {
+        return this.notificationService.broadcastAlert(dto);
     }
 
     @Get('unread-count')

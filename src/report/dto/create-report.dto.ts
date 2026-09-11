@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsIn, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateReportDto {
@@ -27,6 +27,14 @@ export class CreateReportDto {
     @IsNotEmpty()
     @IsString()
     reason: string;
+
+    @ApiPropertyOptional({
+        description: 'Category key for the report',
+        example: 'fake_request',
+    })
+    @IsOptional()
+    @IsString()
+    category?: string;
 
     @ApiPropertyOptional({
         description: 'Detailed description of the issue or violation',

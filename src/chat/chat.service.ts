@@ -40,8 +40,8 @@ export class ChatService {
                     urgency,
                     created_at
                 ),
-                requester:profiles!chat_threads_requester_fkey(id, full_name, profile_image),
-                donor:profiles!chat_threads_donor_fkey(id, full_name, profile_image)
+                requester:profiles!chat_threads_requester_fkey(id, full_name, profile_image, updated_at),
+                donor:profiles!chat_threads_donor_fkey(id, full_name, profile_image, updated_at)
             `)
             .or(`requester_id.eq.${userId},donor_id.eq.${userId}`)
             .order('last_message_at', { ascending: false });
@@ -70,7 +70,8 @@ export class ChatService {
                     id: participant?.id || 'usr_unknown',
                     name: participant?.full_name || 'User',
                     avatar: participant?.profile_image || 'https://cdn.lifelink.org/avatars/user.jpg',
-                    is_online: true,
+                    last_seen_at: (participant as any)?.last_seen_at || participant?.updated_at || null,
+                    is_online: false,
                 },
                 request: thread.request ? {
                     id: thread.request.id,
@@ -86,7 +87,7 @@ export class ChatService {
                 lastMessage: thread.last_message || 'Chat started',
                 time: timeAgo(thread.last_message_at || thread.created_at),
                 unreadCount: unreadCount || 0,
-                isOnline: true,
+                isOnline: false,
             };
         }));
 

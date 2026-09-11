@@ -100,6 +100,152 @@ export class NotificationService {
         }
     }
 
+    
+    async broadcastAlert(dto: {
+        title: string;
+        message: string;
+        city?: string;
+        blood_group?: string;
+        urgency?: string;
+    }) {
+        const title = dto.title?.trim() || 'URGENT: Blood Donation Needed';
+        const message = dto.message?.trim() || 'Emergency whole blood units needed. Please respond if available.';
+        const urgency = dto.urgency || 'critical';
+        const targetCity = dto.city?.toLowerCase().trim() || 'all';
+        const targetGroup = dto.blood_group?.toUpperCase().trim() || 'all';
+
+        // 1. Fetch non-admin candidate users from Supabase profiles
+        let query = this.supabase.client
+            .from('profiles')
+            .select('id, full_name, city_id, blood_group, notifications_enabled, is_admin');
+
+        // Exclude admin users
+        query = query.or('is_admin.is.null,is_admin.eq.false');
+
+        if (targetGroup !== 'all') {
+            query = query.eq('blood_group', targetGroup);
+        }
+
+        const { data: allCandidates, error } = await query;
+        if (error) {
+            this.logger.error(`Error querying profiles for broadcast: ${error.message}`);
+            throw new BadRequestException(`Could not query matching users: ${error.message}`);
+        }
+
+        const CITY_NAME_TO_IDS: Record<string, string[]> = {
+            lahore: ['1172451', '1183539', 'city_lahore', 'lahore'],
+            karachi: ['1174872', 'city_karachi', 'karachi'],
+            islamabad: ['13406360', '1166993', 'city_islamabad', 'city_rawalpindi', 'islamabad', 'rawalpindi'],
+            multan: ['10999891', 'city_multan', 'multan'],
+            faisalabad: ['11726748', 'city_faisalabad', 'faisalabad'],
+            peshawar: ['1168197', 'city_peshawar', 'peshawar'],
+        };
+
+        // Filter by city if not 'all'
+        let targetUsers = allCandidates || [];
+        if (targetCity !== 'all') {
+            const matchIds = CITY_NAME_TO_IDS[targetCity] || [targetCity];
+            targetUsers = targetUsers.filter((u: any) => {
+                if (!u.city_id) return true;
+                const userCity = String(u.city_id).toLowerCase();
+                return matchIds.some(id => userCity.includes(id) || id.includes(userCity));
+            });
+        }
+
+        const notifiedRecipients = targetUsers.length > 0 ? targetUsers : (allCandidates || []);
+        this.logger.log(`Broadcast targeted: matching=${targetUsers.length}, total_candidates=${allCandidates?.length || 0} (City: ${targetCity}, Group: ${targetGroup})`);
+
+        // 2. Insert in-app notifications into Supabase table
+        if (notifiedRecipients.length > 0) {
+            const notificationRows = notifiedRecipients.map((u: any) => ({
+                user_id: u.id,
+                type: 'urgent_request',
+                title,
+                body: message,
+                is_read: false,
+                urgency,
+                blood_group: targetGroup !== 'all' ? targetGroup : (u.blood_group || null),
+                hospital_name: targetCity !== 'all' ? `${dto.city} Emergency Alert` : 'National Emergency Alert',
+                created_at: new Date().toISOString(),
+            }));
+
+            const { error: insertErr } = await this.supabase.client
+                .from('notifications')
+                .insert(notificationRows);
+
+            if (insertErr) {
+                this.logger.warn(`Could not bulk insert notifications: ${insertErr.message}`);
+            } else {
+                this.logger.log(`Successfully inserted ${notificationRows.length} in-app notification rows.`);
+            }
+        }
+
+        // 3. Dispatch Push Notification via OneSignal
+        let pushResult: any = { skipped: false };
+        if (this.apiKey && this.appId) {
+            try {
+                // Build a formatted headline with city and blood group context if specific
+                let pushHeading = title;
+                const badges: string[] = [];
+                if (targetCity !== 'all') {
+                    const capitalizedCity = targetCity.charAt(0).toUpperCase() + targetCity.slice(1);
+                    badges.push(capitalizedCity);
+                }
+                if (targetGroup !== 'all') {
+                    badges.push(targetGroup);
+                }
+                if (badges.length > 0 && !title.includes(badges[0])) {
+                    pushHeading = `🚨 [${badges.join(' • ')}] ${title}`;
+                }
+
+                const oneSignalPayload: any = {
+                    app_id: this.appId,
+                    included_segments: ['Total Subscriptions'],
+                    target_channel: 'push',
+                    headings: { en: pushHeading },
+                    contents: { en: message },
+                    priority: 10,
+                    android_accent_color: 'FFE53935',
+                    data: {
+                        type: 'urgent_request',
+                        urgency,
+                        city: targetCity,
+                        blood_group: targetGroup,
+                        broadcast: true,
+                    },
+                };
+
+                const response = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Key ${this.apiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(oneSignalPayload),
+                });
+
+                pushResult = await response.json();
+                this.logger.log(`OneSignal broadcast dispatched: ${JSON.stringify(pushResult)}`);
+            } catch (pushErr) {
+                this.logger.error(`OneSignal push failed: ${pushErr.message}`);
+                pushResult = { error: pushErr.message };
+            }
+        }
+
+        const successMessage = `Emergency broadcast dispatched successfully! Mobile push alert sent to all subscribers.`;
+        return {
+            success: true,
+            message: successMessage,
+            data: {
+                message: successMessage,
+                recipients_count: notifiedRecipients.length,
+                city: targetCity,
+                blood_group: targetGroup,
+                push_result: pushResult,
+            },
+        };
+    }
+
     async sendBroadcast(title: string, content: string, extraData: any = {}) {
         if (!this.apiKey || !this.appId) {
             this.logger.warn('OneSignal credentials missing in environment variables');
@@ -115,9 +261,12 @@ export class NotificationService {
                 },
                 body: JSON.stringify({
                     app_id: this.appId,
-                    included_segments: ['Subscribed Users', 'Total Subscriptions'],
+                    included_segments: ['Total Subscriptions'],
+                    target_channel: 'push',
                     headings: { en: title },
                     contents: { en: content },
+                    priority: 10,
+                    android_accent_color: 'FFE53935',
                     data: extraData,
                 }),
             });
