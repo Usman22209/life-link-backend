@@ -112,7 +112,7 @@ export class NotificationService {
         const message = dto.message?.trim() || 'Emergency whole blood units needed. Please respond if available.';
         const urgency = dto.urgency || 'critical';
         const targetCity = dto.city?.toLowerCase().trim() || 'all';
-        const targetGroup = dto.blood_group?.toUpperCase().trim() || 'all';
+        const targetGroup = dto.blood_group?.toUpperCase().trim() || 'ALL';
 
         // 1. Fetch non-admin candidate users from Supabase profiles
         let query = this.supabase.client
@@ -122,7 +122,8 @@ export class NotificationService {
         // Exclude admin users
         query = query.or('is_admin.is.null,is_admin.eq.false');
 
-        if (targetGroup !== 'all') {
+        const isAllGroups = !targetGroup || targetGroup.toLowerCase() === 'all';
+        if (!isAllGroups) {
             query = query.eq('blood_group', targetGroup);
         }
 
@@ -143,7 +144,8 @@ export class NotificationService {
 
         // Filter by city if not 'all'
         let targetUsers = allCandidates || [];
-        if (targetCity !== 'all') {
+        const isAllCities = !targetCity || targetCity.toLowerCase() === 'all' || targetCity.toLowerCase().includes('all');
+        if (!isAllCities) {
             const matchIds = CITY_NAME_TO_IDS[targetCity] || [targetCity];
             targetUsers = targetUsers.filter((u: any) => {
                 if (!u.city_id) return true;
