@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
@@ -242,6 +242,23 @@ export class ProfileService {
         return {
             success: true,
             message: 'Settings updated.',
+            data,
+        };
+    }
+
+        async getPublicProfile(userId: string) {
+        const { data, error } = await this.supabase.client
+            .from('profiles')
+            .select('id, full_name, profile_image, city_id, blood_group, last_seen_at')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (error || !data) {
+            throw new NotFoundException('User profile not found');
+        }
+
+        return {
+            success: true,
             data,
         };
     }

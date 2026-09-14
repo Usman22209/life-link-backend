@@ -52,7 +52,7 @@ export class ChatService {
         }
 
         const formatted = await Promise.all((threads || []).map(async (thread: any) => {
-            const isRequester = thread.requester_id === userId;
+            const isRequester = String(thread.requester_id).toLowerCase() === String(userId).toLowerCase();
             const participant = isRequester ? thread.donor : thread.requester;
 
             // Fetch unread count for user in this thread
@@ -67,9 +67,9 @@ export class ChatService {
                 id: thread.id,
                 request_id: thread.request_id,
                 participant: {
-                    id: participant?.id || 'usr_unknown',
+                    id: participant?.id || (isRequester ? thread.donor_id : thread.requester_id),
                     name: participant?.full_name || 'User',
-                    avatar: participant?.profile_image || 'https://cdn.lifelink.org/avatars/user.jpg',
+                    avatar: participant?.profile_image || null,
                     last_seen_at: (participant as any)?.last_seen_at || participant?.updated_at || null,
                     is_online: false,
                 },
@@ -163,10 +163,43 @@ export class ChatService {
 
         const total = (data || []).length;
 
+        // Fetch thread details including participant information
+        let participantInfo: any = null;
+        try {
+            const { data: threadDetails } = await this.supabase.client
+                .from('chat_threads')
+                .select(`
+                    id,
+                    requester_id,
+                    donor_id,
+                    requester:profiles!chat_threads_requester_fkey(id, full_name, profile_image, phone, last_seen_at),
+                    donor:profiles!chat_threads_donor_fkey(id, full_name, profile_image, phone, last_seen_at)
+                `)
+                .eq('id', activeThreadId)
+                .maybeSingle();
+
+            if (threadDetails) {
+                const isRequester = String(threadDetails.requester_id).toLowerCase() === String(userId).toLowerCase();
+                const p: any = isRequester ? threadDetails.donor : threadDetails.requester;
+                if (p) {
+                    participantInfo = {
+                        id: p.id,
+                        name: p.full_name || 'User',
+                        avatar: p.profile_image,
+                        phone: p.phone,
+                        last_seen_at: p.last_seen_at,
+                    };
+                }
+            }
+        } catch (tErr) {
+            this.logger.warn(`Could not fetch thread details in getMessages: ${tErr.message}`);
+        }
+
         return {
             success: true,
             data: {
                 thread_id: activeThreadId,
+                participant: participantInfo,
                 messages: data || [],
                 pagination: {
                     page,

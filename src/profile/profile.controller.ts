@@ -36,6 +36,14 @@ export class ProfileController {
         return this.profileService.updateAvailability(id, dto.is_available);
     }
 
+        @Get('user/:id')
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get public profile of another user by ID' })
+    async getPublicProfile(@Param('id') id: string) {
+        return this.profileService.getPublicProfile(id);
+    }
+
     @Get('me')
     @UseGuards(AuthGuard)
     @ApiBearerAuth()

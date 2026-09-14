@@ -100,7 +100,7 @@ export class BloodRequestService {
             .from('blood_requests')
             .select(`
                 *,
-                requester:profiles(id, phone, blood_group, city_id, profile_image)
+                requester:profiles(id, full_name, phone, blood_group, city_id, profile_image)
             `);
 
         // Include all active/open requests for public feed (filter out expired, fulfilled, and cancelled)
@@ -277,7 +277,7 @@ export class BloodRequestService {
             .from('blood_requests')
             .select(`
                 *,
-                requester:profiles(id, phone, blood_group, city_id, profile_image)
+                requester:profiles(id, full_name, phone, blood_group, city_id, profile_image)
             `)
             .neq('status', 'cancelled')
             .neq('status', 'fulfilled')
