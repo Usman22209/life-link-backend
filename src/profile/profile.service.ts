@@ -87,6 +87,31 @@ export class ProfileService {
             nextEligibleDate = nextEligible.toISOString().split('T')[0];
 
             isEligible = new Date() >= nextEligible;
+        } else if (profileData.last_donated_at) {
+            const lastDate = new Date(profileData.last_donated_at);
+            if (!isNaN(lastDate.getTime())) {
+                lastDonatedAt = profileData.last_donated_at;
+                const nextEligible = new Date(lastDate);
+                nextEligible.setDate(nextEligible.getDate() + 90);
+                nextEligibleDate = nextEligible.toISOString().split('T')[0];
+                isEligible = new Date() >= nextEligible;
+            }
+        }
+
+        // Automatic Age Evaluation from Date of Birth (must be 17-65)
+        if (profileData.dob) {
+            const birthDate = new Date(profileData.dob);
+            if (!isNaN(birthDate.getTime())) {
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                if (age < 17 || age > 65) {
+                    isEligible = false;
+                }
+            }
         }
 
         const loc = resolveLocation(profileData.city_id, profileData.city, profileData.state, profileData.country);

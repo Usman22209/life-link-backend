@@ -209,6 +209,10 @@ export class ChatService {
             const requesterId = request.requester_id;
             const donorId = userId;
 
+            if (requesterId === donorId) {
+                throw new BadRequestException('You cannot create a chat thread with yourself on your own request');
+            }
+
             // Check if thread exists
             const { data: existingThread } = await this.supabase.client
                 .from('chat_threads')

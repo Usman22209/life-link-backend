@@ -1,3 +1,4 @@
+import { isBloodCompatible } from '../common/utils/blood-compatibility.util';
 import { Injectable, BadRequestException, NotFoundException, Logger, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationService } from '../notification/notification.service';
@@ -17,7 +18,7 @@ export class DonationService {
         // 1. Check if request exists and is open
         const { data: request, error: requestError } = await this.supabase.client
             .from('blood_requests')
-            .select('requester_id, status, patient_name')
+            .select('requester_id, status, patient_name, blood_group')
             .eq('id', requestId)
             .single();
 
@@ -37,7 +38,7 @@ export class DonationService {
         // Check donor eligibility (90-day cooldown)
         const { data: donorProfile } = await this.supabase.client
             .from('profiles')
-            .select('last_donated_at')
+            .select('last_donated_at, blood_group')
             .eq('id', donorId)
             .maybeSingle();
 
@@ -48,6 +49,15 @@ export class DonationService {
             if (new Date() < nextEligible) {
                 const formattedDate = nextEligible.toISOString().split('T')[0];
                 throw new BadRequestException(`You cannot donate blood yet. Your 90-day cooldown period ends on ${formattedDate}.`);
+            }
+        }
+
+        // Check medical ABO/Rh blood compatibility
+        if (donorProfile?.blood_group && request.blood_group) {
+            if (!isBloodCompatible(donorProfile.blood_group, request.blood_group)) {
+                throw new BadRequestException(
+                    `Your blood group (${donorProfile.blood_group}) is not medically compatible with this patient's blood group (${request.blood_group}). Only compatible donors can pledge donations.`
+                );
             }
         }
 

@@ -14,6 +14,21 @@ export class ReportService {
     constructor(private readonly supabase: SupabaseService) { }
 
     async createReport(reporterId: string | null, dto: CreateReportDto) {
+        if (reporterId && dto.target_type === 'user' && reporterId === dto.target_id) {
+            throw new BadRequestException('You cannot report yourself.');
+        }
+
+        if (reporterId && (dto.target_type as string) === 'request') {
+            const { data: req } = await this.supabase.client
+                .from('blood_requests')
+                .select('requester_id')
+                .eq('id', dto.target_id)
+                .maybeSingle();
+            if (req && req.requester_id === reporterId) {
+                throw new BadRequestException('You cannot report your own blood request.');
+            }
+        }
+
         let priority = dto.priority;
         if (!priority) {
             const highRiskReasons = ['fraud', 'fake_request', 'commercial_selling', 'money_demanded', 'harassment'];

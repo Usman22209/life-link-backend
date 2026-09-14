@@ -1,3 +1,4 @@
+import { getCompatibleDonors } from '../common/utils/blood-compatibility.util';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -124,7 +125,12 @@ export class NotificationService {
 
         const isAllGroups = !targetGroup || targetGroup.toLowerCase() === 'all';
         if (!isAllGroups) {
-            query = query.eq('blood_group', targetGroup);
+            const compatibleGroups = getCompatibleDonors(targetGroup);
+            if (compatibleGroups && compatibleGroups.length > 0) {
+                query = query.in('blood_group', compatibleGroups);
+            } else {
+                query = query.eq('blood_group', targetGroup);
+            }
         }
 
         const { data: allCandidates, error } = await query;
