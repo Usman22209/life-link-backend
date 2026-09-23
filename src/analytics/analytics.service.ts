@@ -29,7 +29,7 @@ export class AnalyticsService {
         // Fetch requests for grouping
         const { data: requests } = await this.supabase.client
             .from('blood_requests')
-            .select('created_at, status, urgency, fulfilled_units, city_id');
+            .select('created_at, status, urgency, fulfilled_units, city_id, required_date');
 
         // Fetch donations for grouping
         const { data: donations } = await this.supabase.client
@@ -49,7 +49,8 @@ export class AnalyticsService {
             if (found) {
                 found.requests++;
                 if (req.status === 'fulfilled') found.fulfilled++;
-                if (req.urgency === 'critical' || req.urgency === 'high') found.critical++;
+                const isCrit = req.urgency === 'critical' || req.urgency === 'high' || (req.required_date && (new Date(req.required_date).getTime() - new Date(req.created_at).getTime() <= 24 * 60 * 60 * 1000));
+                if (isCrit) found.critical++;
             }
         });
 

@@ -1,37 +1,47 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsInt, Min, IsDateString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    IsString,
+    IsNumber,
+    IsOptional,
+    IsDateString,
+    IsNotEmpty,
+    Min,
+} from 'class-validator';
 
 export enum UrgencyLevel {
-    CRITICAL = 'critical',
-    HIGH = 'high',
     NORMAL = 'normal',
+    HIGH = 'high',
+    CRITICAL = 'critical',
 }
 
 export class CreateBloodRequestDto {
-    @ApiPropertyOptional({ description: 'Name of the patient needing blood' })
+    @ApiPropertyOptional({ description: 'Patient full name' })
     @IsOptional()
     @IsString()
     patient_name?: string;
 
-    @ApiProperty({ description: 'Required blood group', example: 'O+' })
+    @ApiProperty({ description: 'Blood group', example: 'A+' })
+    @IsNotEmpty()
     @IsString()
     blood_group: string;
 
-    @ApiProperty({ description: 'Number of units required', default: 1 })
-    @IsInt()
+    @ApiProperty({ description: 'Units required', example: 1, minimum: 1 })
+    @IsNotEmpty()
+    @IsNumber()
     @Min(1)
     units_required: number;
 
-    @ApiProperty({ description: 'Name of the hospital' })
+    @ApiProperty({ description: 'Hospital name', example: 'Mayo Hospital' })
+    @IsNotEmpty()
     @IsString()
     hospital_name: string;
 
-    @ApiPropertyOptional({ description: 'Full address of the hospital' })
+    @ApiPropertyOptional({ description: 'Hospital address' })
     @IsOptional()
     @IsString()
     hospital_address?: string;
 
-    @ApiPropertyOptional({ description: 'City ID for localization' })
+    @ApiPropertyOptional({ description: 'City ID' })
     @IsOptional()
     @IsString()
     city_id?: string;
@@ -47,13 +57,10 @@ export class CreateBloodRequestDto {
     longitude?: number;
 
     @ApiPropertyOptional({
-        description: 'Urgency level',
-        enum: UrgencyLevel,
-        default: UrgencyLevel.NORMAL
+        description: 'Deprecated: Urgency level is now derived from required_date',
     })
     @IsOptional()
-    @IsEnum(UrgencyLevel)
-    urgency?: UrgencyLevel;
+    urgency?: string;
 
     @ApiPropertyOptional({ description: 'Emergency contact number' })
     @IsOptional()
@@ -65,7 +72,10 @@ export class CreateBloodRequestDto {
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'Deadline for donation', example: '2024-12-31T23:59:59Z' })
+    @ApiPropertyOptional({
+        description: 'Required date and time when blood is needed (ISO 8601 string)',
+        example: '2026-09-24T18:00:00.000Z',
+    })
     @IsOptional()
     @IsDateString()
     required_date?: string;
