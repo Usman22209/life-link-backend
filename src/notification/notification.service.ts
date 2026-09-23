@@ -115,7 +115,8 @@ export class NotificationService {
     async notifyDonorsForRequest(request: any) {
         if (!request || !request.id) return { success: false, message: 'Invalid request' };
 
-        const isCritical = request.urgency === 'critical' || request.urgency === 'urgent' || request.urgency === 'high';
+        const diffMs = request.required_date ? (new Date(request.required_date).getTime() - Date.now()) : null;
+        const isCritical = (diffMs !== null && diffMs <= 24 * 60 * 60 * 1000) || request.urgency === 'critical' || request.urgency === 'urgent' || request.urgency === 'high';
 
         this.logger.log(`[notifyDonorsForRequest] Request ${request.id} (Urgency: ${request.urgency}) - sending to all users`);
 
