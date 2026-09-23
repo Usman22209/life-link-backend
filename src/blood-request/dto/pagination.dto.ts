@@ -43,7 +43,7 @@ export class PaginationDto {
     @IsString()
     status?: string = 'open';
 
-    @ApiPropertyOptional({ description: 'Field to sort by', enum: ['created_at', 'urgency', 'units_required', 'required_date'], default: 'created_at' })
+    @ApiPropertyOptional({ description: 'Field to sort by', enum: ['created_at', 'closing_soon', 'required_date', 'most_units', 'units_required'], default: 'created_at' })
     @IsOptional()
     @IsString()
     sort_by?: string = 'created_at';

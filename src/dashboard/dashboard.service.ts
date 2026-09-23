@@ -22,13 +22,14 @@ export class DashboardService {
             .in('status', ['open', 'partially_fulfilled'])
             .gte('required_date', nowIso);
 
-        // 3. Critical urgency requests (critical, not expired, active)
+        // 3. Critical urgency requests (needed within 24h or marked critical, not expired, active)
+        const in24hIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         const { count: criticalCount } = await this.supabase.client
             .from('blood_requests')
             .select('*', { count: 'exact', head: true })
             .in('status', ['open', 'partially_fulfilled'])
-            .in('urgency', ['critical', 'CRITICAL'])
-            .gte('required_date', nowIso);
+            .gte('required_date', nowIso)
+            .or(`required_date.lte.${in24hIso},urgency.in.(critical,CRITICAL)`);
 
         // 4. Fulfilled donations
         const { count: fulfilledDonationsCount } = await this.supabase.client
