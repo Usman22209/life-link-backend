@@ -1,3 +1,4 @@
+import { resolveLocation } from '../common/utils/location.util';
 import { getCompatibleDonors } from '../common/utils/blood-compatibility.util';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -33,7 +34,7 @@ export class NotificationService {
     async sendToUser(userId: string, title: string, content: string, extraData: any = {}) {
         // 1. Store in DB
         try {
-            await this.supabase.client
+            const { data: notifData, error: dbErr } = await this.supabase.client
                 .from('notifications')
                 .insert({
                     user_id: userId,
@@ -41,13 +42,21 @@ export class NotificationService {
                     title,
                     body: content,
                     is_read: false,
-                    urgency: extraData.urgency,
-                    blood_group: extraData.bloodType || extraData.blood_group,
-                    hospital_name: extraData.hospital || extraData.hospital_name,
-                    request_id: extraData.request_id,
-                });
+                    urgency: extraData.urgency || null,
+                    blood_group: extraData.bloodType || extraData.blood_group || null,
+                    hospital_name: extraData.hospital || extraData.hospital_name || null,
+                    request_id: extraData.request_id || null,
+                })
+                .select()
+                .maybeSingle();
+
+            if (dbErr) {
+                this.logger.error(`Failed to insert notification record in DB for user ${userId}: ${JSON.stringify(dbErr)}`);
+            } else {
+                this.logger.log(`Successfully inserted notification ${notifData?.id} for user ${userId}`);
+            }
         } catch (dbErr) {
-            this.logger.warn(`Failed to insert notification record in DB: ${dbErr.message}`);
+            this.logger.warn(`Exception inserting notification record in DB: ${dbErr.message}`);
         }
 
         // 2. Check if user has disabled notifications
@@ -102,6 +111,120 @@ export class NotificationService {
     }
 
     
+    
+    async notifyDonorsForRequest(request: any) {
+        if (!request || !request.id) return { success: false, message: 'Invalid request' };
+
+        const isCritical = request.urgency === 'critical' || request.urgency === 'urgent' || request.urgency === 'high';
+
+        this.logger.log(`[notifyDonorsForRequest] Request ${request.id} (Urgency: ${request.urgency}) - sending to all users`);
+
+        // 1. Fetch all eligible candidate users (non-admin, not the requester)
+        let query = this.supabase.client
+            .from('profiles')
+            .select('id, full_name, blood_group, notifications_enabled, is_admin')
+            .neq('id', request.requester_id)
+            .or('is_admin.is.null,is_admin.eq.false');
+
+        // If not critical, target medically compatible blood groups if available
+        if (!isCritical && request.blood_group) {
+            const compatibleGroups = getCompatibleDonors(request.blood_group);
+            if (compatibleGroups && compatibleGroups.length > 0) {
+                query = query.in('blood_group', compatibleGroups);
+            }
+        }
+
+        const { data: candidates, error } = await query;
+        if (error) {
+            this.logger.error(`Error querying candidate users for request ${request.id}: ${error.message}`);
+            return { success: false, error: error.message };
+        }
+
+        if (!candidates || candidates.length === 0) {
+            this.logger.log(`No candidate users found for request ${request.id}`);
+            return { success: true, count: 0 };
+        }
+
+        const notifType = isCritical ? 'urgent_request' : 'blood_request';
+        const title = isCritical
+            ? `🚨 Critical: ${request.blood_group || 'Blood'} Needed!`
+            : `🩸 Blood Request: ${request.blood_group || 'Blood'} Needed`;
+
+        const body = `${request.patient_name || 'A patient'} urgently needs ${request.units_required || 1} unit(s) of ${request.blood_group || ''} blood at ${request.hospital_name || 'Hospital'}.`;
+
+        // 2. Bulk insert in-app notifications for all candidate users
+        const notificationRows = candidates.map((u: any) => ({
+            user_id: u.id,
+            type: notifType,
+            title,
+            body,
+            is_read: false,
+            urgency: request.urgency || (isCritical ? 'critical' : 'normal'),
+            blood_group: request.blood_group || null,
+            hospital_name: request.hospital_name || null,
+            request_id: request.id,
+            created_at: new Date().toISOString(),
+        }));
+
+        for (let i = 0; i < notificationRows.length; i += 100) {
+            const batch = notificationRows.slice(i, i + 100);
+            const { error: insertErr } = await this.supabase.client
+                .from('notifications')
+                .insert(batch);
+            if (insertErr) {
+                this.logger.error(`Error inserting notifications batch: ${insertErr.message}`);
+            }
+        }
+        this.logger.log(`Created ${notificationRows.length} in-app notification rows for request ${request.id}`);
+
+        // 3. Send OneSignal push notification to all users
+        if (this.apiKey && this.appId) {
+            const pushUsers = candidates.filter((u: any) => u.notifications_enabled !== false);
+            const userIds = pushUsers.map((u: any) => u.id);
+
+            if (userIds.length > 0) {
+                try {
+                    const oneSignalPayload: any = {
+                        app_id: this.appId,
+                        include_aliases: { external_id: userIds },
+                        include_external_user_ids: userIds,
+                        target_channel: 'push',
+                        headings: { en: title },
+                        contents: { en: body },
+                        priority: isCritical ? 10 : 7,
+                        android_accent_color: 'FFE53935',
+                        data: {
+                            type: notifType,
+                            request_id: request.id,
+                            blood_group: request.blood_group,
+                            urgency: request.urgency,
+                            hospital_name: request.hospital_name,
+                            patient_name: request.patient_name,
+                        },
+                    };
+
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Key ${this.apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(oneSignalPayload),
+                    });
+                    const pushResult = await response.json();
+                    this.logger.log(`OneSignal push dispatched for request ${request.id}: ${JSON.stringify(pushResult)}`);
+                } catch (pushErr) {
+                    this.logger.error(`Failed to send OneSignal push for request ${request.id}: ${pushErr.message}`);
+                }
+            }
+        }
+
+        return {
+            success: true,
+            notified_count: candidates.length,
+        };
+    }
+
     async broadcastAlert(dto: {
         title: string;
         message: string;

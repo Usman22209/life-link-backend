@@ -18,7 +18,7 @@ export class DonationService {
         // 1. Check if request exists and is open
         const { data: request, error: requestError } = await this.supabase.client
             .from('blood_requests')
-            .select('requester_id, status, patient_name, blood_group')
+            .select('id, requester_id, status, patient_name, blood_group, hospital_name, urgency, units_required')
             .eq('id', requestId)
             .single();
 
@@ -105,7 +105,16 @@ export class DonationService {
             await this.notificationService.sendToUser(
                 request.requester_id,
                 'Donation Accepted! 🩸',
-                `${donorName} has offered to help with your request for ${request.patient_name || 'blood'}.`
+                `${donorName} has offered to help with your request for ${request.patient_name || 'blood'}.`,
+                {
+                    type: 'donation_match',
+                    request_id: requestId,
+                    urgency: request.urgency || 'urgent',
+                    blood_group: request.blood_group,
+                    hospital_name: request.hospital_name,
+                    patient_name: request.patient_name,
+                    donor_id: donorId,
+                }
             );
         } catch (notifyError) {
             this.logger.warn(`Failed to notify requester ${request.requester_id}: ${notifyError.message}`);

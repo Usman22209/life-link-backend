@@ -1,3 +1,4 @@
+import { NotificationService } from '../notification/notification.service';
 import { Injectable, BadRequestException, NotFoundException, Logger, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
@@ -60,7 +61,7 @@ function calculateTimeLeft(requiredDateStr?: string): { isExpired: boolean; time
 export class BloodRequestService {
     private readonly logger = new Logger(BloodRequestService.name);
 
-    constructor(private readonly supabase: SupabaseService) { }
+    constructor(private readonly supabase: SupabaseService, private readonly notificationService: NotificationService) { }
 
     async create(userId: string, dto: CreateBloodRequestDto) {
         const requiredDate = dto.required_date || getDefaultRequiredDate(dto.urgency);
@@ -80,6 +81,11 @@ export class BloodRequestService {
             this.logger.error(`Error creating blood request for user ${userId}`, error.message);
             throw new BadRequestException(`Could not create blood request: ${error.message}`);
         }
+
+        // Notify donors in the same city (especially for critical requests)
+        this.notificationService.notifyDonorsForRequest(data).catch((notifErr) => {
+            this.logger.error(`Failed to dispatch notifications for request ${data?.id}: ${notifErr.message}`);
+        });
 
         return {
             success: true,
