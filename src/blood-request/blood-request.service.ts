@@ -51,6 +51,8 @@ function calculateTimeLeft(requiredDateStr?: string): { isExpired: boolean; time
     const diffMs = new Date(requiredDateStr).getTime() - new Date().getTime();
     if (diffMs <= 0) return { isExpired: true, timeLeft: 'Expired' };
 
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    if (minutes < 60) return { isExpired: false, timeLeft: `${Math.max(1, minutes)}m left` };
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     if (hours < 24) return { isExpired: false, timeLeft: `${hours}h left` };
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -65,6 +67,9 @@ export class BloodRequestService {
 
     async create(userId: string, dto: CreateBloodRequestDto) {
         const requiredDate = dto.required_date || getDefaultRequiredDate(dto.urgency);
+        const diffMs = new Date(requiredDate).getTime() - Date.now();
+        const derivedUrgency = diffMs <= 24 * 60 * 60 * 1000 ? 'critical' : diffMs <= 72 * 60 * 60 * 1000 ? 'high' : 'normal';
+        const urgencyToSave = dto.urgency || derivedUrgency;
 
         const { data, error } = await this.supabase.client
             .from('blood_requests')
@@ -72,6 +77,7 @@ export class BloodRequestService {
                 requester_id: userId,
                 ...dto,
                 required_date: requiredDate,
+                urgency: urgencyToSave,
                 status: BloodRequestStatus.OPEN,
             })
             .select()
@@ -206,14 +212,22 @@ export class BloodRequestService {
             mapped.sort((a: any, b: any) => a.distance_km - b.distance_km);
             requestsList = mapped.slice(skip, skip + limit);
         } else {
+            const isClosingSoon =
+                rawSort === 'closing_soon' ||
+                rawSort === 'required_date' ||
+                rawSort === 'time_left';
+
             const sortColumn =
                 rawSort === 'most_units'
                     ? 'units_required'
-                    : rawSort === 'urgency'
-                        ? 'urgency'
+                    : isClosingSoon
+                        ? 'required_date'
                         : 'created_at';
 
-            const isAscending = pagination.sort_order === 'asc';
+            // Closing soonest defaults to ascending (earliest deadline first)
+            const isAscending = isClosingSoon
+                ? (pagination.sort_order ? pagination.sort_order === 'asc' : true)
+                : pagination.sort_order === 'asc';
 
             const { data, error } = await dataQuery
                 .order(sortColumn, { ascending: isAscending })
@@ -277,9 +291,12 @@ export class BloodRequestService {
     }
 
     async getUrgentRequests(limit: number = 5, lat?: number, lng?: number) {
-        const nowIso = new Date().toISOString();
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const maxUrgentDate = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-        const { data, error } = await this.supabase.client
+        // Urgent requests: active requests needed within the next 48 hours or marked critical/high
+        let query = this.supabase.client
             .from('blood_requests')
             .select(`
                 *,
@@ -288,9 +305,13 @@ export class BloodRequestService {
             .neq('status', 'cancelled')
             .neq('status', 'fulfilled')
             .neq('status', 'expired')
-            .gte('required_date', nowIso)
-            .in('urgency', ['critical', 'high', 'CRITICAL', 'HIGH', 'urgent', 'URGENT'])
-            .order('created_at', { ascending: false })
+            .gte('required_date', nowIso);
+
+        // Filter: required_date <= 48h OR legacy urgency in critical/high
+        query = query.or(`required_date.lte.${maxUrgentDate},urgency.in.(critical,high,urgent,CRITICAL,HIGH,URGENT)`);
+
+        const { data, error } = await query
+            .order('required_date', { ascending: true })
             .limit(limit);
 
         if (error) {
@@ -322,6 +343,8 @@ export class BloodRequestService {
                 progressPercentage: Math.min(100, Math.round((fulfilled / unitsReq) * 100)),
                 urgency: (req.urgency || 'urgent').toLowerCase(),
                 time: timeAgo(req.created_at),
+                required_date: req.required_date,
+                time_left: timeLeft,
                 timeLeft,
                 isExpired,
                 distance: distanceStr,
